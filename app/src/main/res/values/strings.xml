@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">Toman Rates</string>
+    <string name="widget_label">Toman Rates</string>
+    <string name="widget_description">Free-market selling prices of foreign currencies in Iranian Tomans.</string>
+    <string name="widget_title">FREE MARKET · TOMAN</string>
+</resources>

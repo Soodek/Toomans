@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:orientation="vertical"
+    android:padding="14dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/widget_title"
+            android:textColor="#7C8190"
+            android:textSize="9sp"
+            android:letterSpacing="0.1"
+            android:fontFamily="sans-serif-medium" />
+        <TextView
+            android:id="@+id/status"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="end"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+        <TextView
+            android:id="@+id/hero_flag"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="30sp" />
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="10dp"
+            android:orientation="vertical">
+            <TextView
+                android:id="@+id/hero_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:textColor="#A9AEBB"
+                android:textSize="11sp"
+                android:letterSpacing="0.12"
+                android:fontFamily="sans-serif-medium" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="bottom"
+                android:orientation="horizontal">
+                <TextView
+                    android:id="@+id/hero_rate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:textColor="#FFFFFF"
+                    android:textSize="34sp"
+                    android:fontFamily="sans-serif-light" />
+                <TextView
+                    android:id="@+id/hero_unit"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:layout_marginBottom="6dp"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:textColor="#7C8190"
+                    android:textSize="11sp" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+
+    <View
+        android:id="@+id/divider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="4dp"
+        android:background="#262A33"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:id="@+id/row1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="26dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:visibility="gone">
+        <TextView
+            android:id="@+id/row1_flag"
+            android:layout_width="26dp"
+            android:layout_height="wrap_content"
+            android:textSize="14sp" />
+        <TextView
+            android:id="@+id/row1_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:maxLines="1"
+            android:textColor="#A9AEBB"
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-medium" />
+        <TextView
+            android:id="@+id/row1_rate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:textColor="#ECEEF3"
+            android:textSize="15sp"
+            android:fontFamily="sans-serif-medium" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/row2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="26dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:visibility="gone">
+        <TextView
+            android:id="@+id/row2_flag"
+            android:layout_width="26dp"
+            android:layout_height="wrap_content"
+            android:textSize="14sp" />
+        <TextView
+            android:id="@+id/row2_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:maxLines="1"
+            android:textColor="#A9AEBB"
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-medium" />
+        <TextView
+            android:id="@+id/row2_rate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:textColor="#ECEEF3"
+            android:textSize="15sp"
+            android:fontFamily="sans-serif-medium" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/row3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="26dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:visibility="gone">
+        <TextView
+            android:id="@+id/row3_flag"
+            android:layout_width="26dp"
+            android:layout_height="wrap_content"
+            android:textSize="14sp" />
+        <TextView
+            android:id="@+id/row3_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:maxLines="1"
+            android:textColor="#A9AEBB"
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-medium" />
+        <TextView
+            android:id="@+id/row3_rate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:textColor="#ECEEF3"
+            android:textSize="15sp"
+            android:fontFamily="sans-serif-medium" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/row4"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="26dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:visibility="gone">
+        <TextView
+            android:id="@+id/row4_flag"
+            android:layout_width="26dp"
+            android:layout_height="wrap_content"
+            android:textSize="14sp" />
+        <TextView
+            android:id="@+id/row4_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:maxLines="1"
+            android:textColor="#A9AEBB"
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-medium" />
+        <TextView
+            android:id="@+id/row4_rate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:textColor="#ECEEF3"
+            android:textSize="15sp"
+            android:fontFamily="sans-serif-medium" />
+    </LinearLayout>
+
+</LinearLayout>
