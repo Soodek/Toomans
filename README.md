@@ -13,7 +13,7 @@ Alanchand returns. Kotlin, RemoteViews widget, Compose app, WorkManager. No thir
 5. Long-press the home screen > Widgets > Toman Rates. Resize to show more currencies.
 
 ## How it works
-- Source: `GET https://api.alanchand.com/?type=currencies&token=...` - one call returns every currency
+ require API token one call returns every currency
   (observed: 44 entries) as `{slug: {sell, buy, dolar_rate, open, high, low, dayChange, updated_at, name}}`.
 - Only `sell` is used (Tomans). Five currencies (JPY, IQD, AMD, KRW, SYP) are quoted per 100 units; the API has
   no unit field, so the app detects the Persian "صد" prefix in `name`.
