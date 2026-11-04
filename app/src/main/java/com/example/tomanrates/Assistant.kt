@@ -42,7 +42,7 @@ object AssistantRepository {
 
     fun ask(ctx: Context, prompt: String, snap: Snapshot, history: List<ChatLine>): String {
         val endpoint = endpoint(ctx)
-        require(endpoint.startsWith("https://")) { "ابتدا آدرس HTTPS مربوط به Cloudflare Worker را وارد کن." }
+        require(endpoint.startsWith("https://")) { "آدرس امن سرور دستیار هنوز تنظیم نشده است." }
         val market = JSONObject()
         snap.rates.values.forEach { r -> market.put(r.slug, JSONObject().put("name", r.name).put("sell_toman", r.sell.toPlainString()).put("buy_toman", r.buy?.toPlainString())) }
         val gold = GoldRepository.snapshot(ctx)
@@ -96,8 +96,8 @@ fun AiAssistantTab(snap: Snapshot) {
     val messages = remember { mutableStateListOf<ChatLine>() }
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("دستیار هوشمند بازار", fontSize = 23.sp)
-        Text("پاسخ فارسی درباره خود برنامه و تحلیل آموزشی بازار ایران؛ نه توصیه قطعی سرمایه‌گذاری.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-        OutlinedTextField(endpoint, { endpoint = it }, label = { Text("آدرس Cloudflare Worker (HTTPS)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        Text("تحلیل فارسی بازار با استفاده از داده‌های ارز و طلای برنامه؛ پاسخ‌ها آموزشی‌اند و توصیه قطعی سرمایه‌گذاری نیستند.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+        OutlinedTextField(endpoint, { endpoint = it }, label = { Text("آدرس سرور دستیار (HTTPS)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
         Button(onClick = { AssistantRepository.saveEndpoint(ctx, endpoint); error = "آدرس ذخیره شد." }, enabled = endpoint.startsWith("https://")) { Text("ذخیره آدرس سرور") }
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(messages) { line ->
