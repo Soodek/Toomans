@@ -22,6 +22,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -46,6 +47,7 @@ import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Newspaper
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CurrencyExchange
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Settings
@@ -98,20 +100,26 @@ fun TomanApp(requested: String?) {
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.End, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                IconButton(onClick = { tab = if (tab == 6) 0 else 6 }) {
+                    Icon(imageVector = if (tab == 6) Icons.Filled.ArrowBack else Icons.Filled.Newspaper, contentDescription = if (tab == 6) "Back" else "News")
+                }
+            }
+        },
         bottomBar = {
             NavigationBar(
                 containerColor = MaterialTheme.colorScheme.surface,
                 tonalElevation = 0.dp,
             ) {
-                listOf("Calculator", "Currencies", "Gold", "Chart", "News", "AI", "Settings").forEachIndexed { i, label ->
+                listOf("Calculator", "Currencies", "Gold", "Chart", "AI", "Settings").forEachIndexed { i, label ->
                     val isSelected = tab == i
                     val icon = when (i) {
                         0 -> Icons.Filled.Calculate
                         1 -> Icons.Filled.CurrencyExchange
                         2 -> Icons.Filled.Savings
                         3 -> Icons.Filled.ShowChart
-                        4 -> Icons.Filled.Newspaper
-                        5 -> Icons.Filled.AutoAwesome
+                        4 -> Icons.Filled.AutoAwesome
                         else -> Icons.Filled.Settings
                     }
                     NavigationBarItem(
@@ -137,8 +145,8 @@ fun TomanApp(requested: String?) {
                 1 -> CurrenciesTab(snap, selected, defaultSlug, changed)
                 2 -> GoldTab()
                 3 -> MarketChartTab(snap)
-                4 -> NewsHomeTab()
-                5 -> AiAssistantTab(snap)
+                4 -> AiAssistantTab(snap)
+                6 -> NewsHomeTab()
                 else -> SettingsTab(snap, changed)
             }
         }
