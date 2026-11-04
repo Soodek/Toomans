@@ -70,7 +70,7 @@ private fun MarketAssetCard(snap: Snapshot, asset: String, period: String, ctx: 
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(when(asset) { "gold18" -> "طلای ۱۸ عیار"; "coin" -> "سکه امامی"; else -> Catalog.englishName(asset, rate?.name) + " · " + Catalog.code(asset) }, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(value?.let { Fmt.toman(it) + " تومان" } ?: "داده‌ای موجود نیست", fontSize = 22.sp)
-            if (change != null) Text("تغییر روزانه: \${if (change > 0) "+" else ""}\${"%.2f".format(java.util.Locale.US, change)}٪", fontSize = 12.sp)
+            if (change != null) Text("تغییر روزانه: ${if (change > 0) "+" else ""}${"%.2f".format(java.util.Locale.US, change)}٪", fontSize = 12.sp)
             if (period == "روز" && value != null && high != null && low != null) {
                 Canvas(Modifier.fillMaxWidth().height(110.dp)) {
                     val min = low.toFloat()
@@ -84,9 +84,9 @@ private fun MarketAssetCard(snap: Snapshot, asset: String, period: String, ctx: 
                     open?.let { drawLine(lineColor, Offset(center-22.dp.toPx(), y(it)), Offset(center, y(it)), 3.dp.toPx(), cap=StrokeCap.Round) }
                     drawLine(lineColor, Offset(center, y(value)), Offset(center+22.dp.toPx(), y(value)), 3.dp.toPx(), cap=StrokeCap.Round)
                 }
-                Text("کمینه: \${Fmt.toman(low)} · بیشینه: \${Fmt.toman(high)}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("کمینه: ${Fmt.toman(low)} · بیشینه: ${Fmt.toman(high)}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
-                Text(if (period == "روز") "بازه روزانه از منبع در دسترس نیست." else "تاریخچه \${period} در API فعلی وجود ندارد؛ برای جلوگیری از نمایش داده ساختگی، نمودار تاریخی نشان داده نمی‌شود.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                Text(if (period == "روز") "بازه روزانه از منبع در دسترس نیست." else "تاریخچه ${period} در API فعلی وجود ندارد؛ برای جلوگیری از نمایش داده ساختگی، نمودار تاریخی نشان داده نمی‌شود.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
             }
         }
     }
