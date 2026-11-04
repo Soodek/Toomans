@@ -1,0 +1,7 @@
+name = "toman-ai-worker"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+OPENAI_MODEL = "gpt-4.1-mini"
+# Set ALLOWED_ORIGIN to your app's trusted web origin if applicable.
