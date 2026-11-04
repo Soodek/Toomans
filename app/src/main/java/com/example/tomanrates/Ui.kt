@@ -183,6 +183,7 @@ fun CalculatorTab(snap: Snapshot, selected: List<String>, slug: String, onSlug: 
                 StatusLine(snap)
             }
         }
+        NewsSection(cur, Modifier.weight(1f).fillMaxWidth())
     }
 }
 
