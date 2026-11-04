@@ -33,7 +33,7 @@ private const val AI_ENDPOINT = "https://restless-block-3fc7.amirid36.workers.de
 data class ChatLine(val role: String, val text: String)
 
 object AssistantRepository {
-    fun ask(ctx: Context, prompt: String, snap: Snapshot, history: List<ChatLine>): String {
+    fun askStream(ctx: Context, prompt: String, snap: Snapshot, history: List<ChatLine>, onChunk: (String) -> Unit) {
         val market = JSONObject()
         snap.rates.values.forEach { r -> market.put(r.slug, JSONObject().put("name", r.name).put("sell_toman", r.sell.toPlainString()).put("buy_toman", r.buy?.toPlainString())) }
         val gold = GoldRepository.snapshot(ctx)
@@ -48,7 +48,7 @@ object AssistantRepository {
             goldData.put("stale", it.stale)
         }
         val historyJson = org.json.JSONArray()
-        history.takeLast(12).forEach { historyJson.put(JSONObject().put("role", it.role).put("content", it.text)) }
+        history.takeLast(6).forEach { historyJson.put(JSONObject().put("role", it.role).put("content", it.text.take(1500))) }
         val body = JSONObject()
             .put("message", prompt)
             .put("history", historyJson)
@@ -61,17 +61,32 @@ object AssistantRepository {
             c = (URL(AI_ENDPOINT).openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 connectTimeout = 15000
-                readTimeout = 60000
+                readTimeout = 120000
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json")
+                setRequestProperty("Accept", "text/event-stream")
             }
             c.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
             val code = c.responseCode
-            val stream = if (code in 200..299) c.inputStream else c.errorStream
-            val raw = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-            if (code !in 200..299) throw IllegalStateException("خطای سرور ($code): " + JSONObject(raw).optString("error", "درخواست ناموفق بود"))
-            val json = JSONObject(raw)
-            return json.optString("reply").ifBlank { throw IllegalStateException("پاسخ سرور خالی بود.") }
+            if (code !in 200..299) {
+                val raw = c.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                val message = try { JSONObject(raw).optString("error", raw) } catch (_: Exception) { raw }
+                throw IllegalStateException("خطای سرور ($code): $message")
+            }
+            c.inputStream.bufferedReader(Charsets.UTF_8).use { reader ->
+                var line: String?
+                while (reader.readLine().also { line = it } != null) {
+                    val data = line!!.trim()
+                    if (!data.startsWith("data:")) continue
+                    val payload = data.removePrefix("data:").trim()
+                    if (payload.isBlank() || payload == "[DONE]") continue
+                    val chunk = try {
+                        val json = JSONObject(payload)
+                        json.optString("response", json.optString("text", ""))
+                    } catch (_: Exception) { payload }
+                    if (chunk.isNotEmpty()) onChunk(chunk)
+                }
+            }
         } finally { c?.disconnect() }
     }
 }
@@ -101,15 +116,28 @@ fun AiAssistantTab(snap: Snapshot) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(input, { input = it }, modifier = Modifier.weight(1f), label = { Text("سؤالت را بنویس…") }, enabled = !busy)
             Button(enabled = input.isNotBlank() && !busy, onClick = {
-                val q = input.trim(); input = ""; messages.add(ChatLine("user", q)); busy = true; error = null
+                val q = input.trim()
+                input = ""
+                val history = messages.toList()
+                messages.add(ChatLine("user", q))
+                val answerIndex = messages.size
+                messages.add(ChatLine("assistant", ""))
+                busy = true
+                error = null
                 scope.launch {
                     try {
-                        val answer = withContext(Dispatchers.IO) { AssistantRepository.ask(ctx, q, snap, messages.dropLast(1).toList()) }
-                        messages.add(ChatLine("assistant", answer))
+                        withContext(Dispatchers.IO) {
+                            AssistantRepository.askStream(ctx, q, snap, history) { chunk ->
+                                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                    val old = messages[answerIndex].text
+                                    messages[answerIndex] = ChatLine("assistant", old + chunk)
+                                }
+                            }
+                        }
                     } catch (e: Exception) { error = e.message ?: "ارتباط با دستیار ناموفق بود." }
                     finally { busy = false }
                 }
-            }) { Text(if (busy) "…" else "ارسال") }
+            }) { Text(if (busy) "در حال پاسخ…" else "ارسال") }
         }
     }
 }
