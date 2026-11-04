@@ -21,6 +21,10 @@ data class Rate(
     val name: String,            // Persian name as sent by the API
     val sell: BigDecimal,        // Tomans
     val buy: BigDecimal?,
+    val open: BigDecimal? = null,
+    val high: BigDecimal? = null,
+    val low: BigDecimal? = null,
+    val dayChange: BigDecimal? = null,
     val sourceUpdatedAt: String?, // as reported by the API, timezone not documented
 )
 
@@ -84,6 +88,10 @@ object Api {
                 name = o.optString("name", slug.uppercase()),
                 sell = sell,
                 buy = o.opt("buy")?.toString()?.toBigDecimalOrNull(),
+                open = o.opt("open")?.toString()?.toBigDecimalOrNull(),
+                high = o.opt("high")?.toString()?.toBigDecimalOrNull(),
+                low = o.opt("low")?.toString()?.toBigDecimalOrNull(),
+                dayChange = o.opt("dayChange")?.toString()?.toBigDecimalOrNull(),
                 sourceUpdatedAt = o.optString("updated_at", "").ifBlank { null },
             )
         }
