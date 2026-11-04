@@ -159,7 +159,7 @@ fun GoldTab() {
     }
 
     LaunchedEffect(Unit) {
-        if (market == null) refresh()
+        refresh()
     }
 
     val grams = parseAmount(weight)
