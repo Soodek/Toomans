@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.math.BigDecimal
@@ -33,6 +34,12 @@ fun MarketChartTab(snap: Snapshot) {
         "coin" -> gold?.emamiCoin?.price
         else -> rate?.sell
     }
+    val high = when(asset) { "gold18" -> gold?.gold18?.high; "coin" -> gold?.emamiCoin?.high; else -> rate?.high }
+    val low = when(asset) { "gold18" -> gold?.gold18?.low; "coin" -> gold?.emamiCoin?.low; else -> rate?.low }
+    val open = rate?.open
+    val change = rate?.dayChange
+    val lineColor = MaterialTheme.colorScheme.primary
+    val gridColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .25f)
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("نمودار بازار", fontSize = 23.sp)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -44,17 +51,25 @@ fun MarketChartTab(snap: Snapshot) {
         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(value?.let { Fmt.toman(it) + " تومان" } ?: "داده‌ای برای این دارایی موجود نیست", fontSize = 24.sp)
-                Text("نمایش بازه: $period", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-                Canvas(Modifier.fillMaxWidth().height(170.dp)) {
-                    val c = MaterialTheme.colorScheme.primary
-                    val mid = size.height * .52f
-                    drawLine(c.copy(alpha=.18f), Offset(0f, mid), Offset(size.width, mid), 1.dp.toPx())
-                    drawLine(c.copy(alpha=.7f), Offset(0f, size.height*.25f), Offset(size.width, size.height*.25f), 1.dp.toPx())
-                    drawLine(c.copy(alpha=.7f), Offset(0f, size.height*.78f), Offset(size.width, size.height*.78f), 1.dp.toPx())
-                    drawLine(c, Offset(0f, mid), Offset(size.width, mid), 3.dp.toPx(), cap=StrokeCap.Round)
+                if (period == "روز" && value != null && high != null && low != null) {
+                    Canvas(Modifier.fillMaxWidth().height(170.dp)) {
+                        val min = low.toFloat()
+                        val max = high.toFloat()
+                        val span = (max - min).coerceAtLeast(1f)
+                        fun y(v: BigDecimal) = size.height - ((v.toFloat() - min) / span * size.height * .76f + size.height * .12f)
+                        drawLine(gridColor, Offset(0f, size.height*.12f), Offset(size.width, size.height*.12f), 1.dp.toPx())
+                        drawLine(gridColor, Offset(0f, size.height*.88f), Offset(size.width, size.height*.88f), 1.dp.toPx())
+                        val x = listOf(0f, size.width*.33f, size.width*.66f, size.width)
+                        val vals = listOf(low, open ?: value, value, high)
+                        for (i in 0 until vals.lastIndex) drawLine(lineColor, Offset(x[i], y(vals[i])), Offset(x[i+1], y(vals[i+1])), 3.dp.toPx(), cap=StrokeCap.Round)
+                        vals.forEachIndexed { i, v -> drawCircle(lineColor, 4.dp.toPx(), Offset(x[i], y(v))) }
+                    }
+                    Text("کمینه: ${Fmt.toman(low)} · بیشینه: ${Fmt.toman(high)}", fontSize = 11.sp)
+                    if (change != null) Text("تغییر روزانه: $change٪", fontSize = 12.sp)
+                } else {
+                    Text(if (period == "روز") "برای این دارایی هنوز داده‌ی سقف و کف روزانه از منبع دریافت نشده." else "تاریخچه‌ی $period در API فعلی موجود نیست؛ نمودار تاریخی ساختگی نمایش داده نمی‌شود.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 }
-                Text("نکته: این نسخه فقط آخرین قیمت لحظه‌ای/ذخیره‌شده را دارد. تاریخچه‌ی واقعی برای هفته، ماه و سال هنوز از منبع داده دریافت نمی‌شود؛ بنابراین نمودار تاریخی ساختگی نمایش داده نمی‌شود.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-                Text("منبع نرخ ارز: Alanchand · منبع طلا و سکه: داده بازار ایران / TGJU", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+                Text("داده‌ی نرخ ارز: Alanchand · طلا و سکه: منبع بازار ایران / TGJU.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
             }
         }
     }
