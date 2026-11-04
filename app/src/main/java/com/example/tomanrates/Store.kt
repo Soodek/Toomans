@@ -70,14 +70,69 @@ object Store {
     fun lastAttemptOk(ctx: Context): Boolean = p(ctx).getBoolean("last_ok", false)
     fun lastError(ctx: Context): String = p(ctx).getString("last_error", "") ?: ""
 
-    fun saveSuccess(ctx: Context, raw: String, now: Long) = p(ctx).edit()
-        .putString("raw", raw).putLong("last_success", now).putLong("last_attempt", now)
-        .putBoolean("last_ok", true).putString("last_error", "").apply()
+    fun saveSuccess(ctx: Context, raw: String, now: Long) {
+        p(ctx).edit()
+            .putString("raw", raw).putLong("last_success", now).putLong("last_attempt", now)
+            .putBoolean("last_ok", true).putString("last_error", "").apply()
+        PriceHistory.append(ctx, Api.parse(raw), now)
+    }
+
+    fun priceHistory(ctx: Context, slug: String, rangeMs: Long): List<PricePoint> =
+        PriceHistory.read(ctx, slug, rangeMs)
 
     /** attemptAt is null when the request never reached the server (does not use up the hourly budget). */
     fun saveFailure(ctx: Context, reason: String, attemptAt: Long?) {
         val e = p(ctx).edit().putBoolean("last_ok", false).putString("last_error", reason)
         if (attemptAt != null) e.putLong("last_attempt", attemptAt)
         e.apply()
+    }
+}
+
+
+/** Locally collected, real quote history. Samples are captured only after successful API responses. */
+data class PricePoint(val timestamp: Long, val price: Double)
+
+private object PriceHistory {
+    private const val KEY = "price_history_v1"
+    private const val RETENTION_MS = 31L * 24 * 60 * 60 * 1000
+    private const val MAX_SAMPLES = 800
+
+    @Synchronized
+    fun append(ctx: Context, rates: Map<String, Rate>, timestamp: Long) {
+        if (rates.isEmpty()) return
+        val prefs = ctx.applicationContext.getSharedPreferences("toman_rates", Context.MODE_PRIVATE)
+        val samples = try { org.json.JSONArray(prefs.getString(KEY, "[]") ?: "[]") }
+            catch (_: Exception) { org.json.JSONArray() }
+        val cutoff = timestamp - RETENTION_MS
+        val kept = org.json.JSONArray()
+        for (i in 0 until samples.length()) {
+            val item = samples.optJSONObject(i) ?: continue
+            if (item.optLong("t") >= cutoff) kept.put(item)
+        }
+        val values = org.json.JSONObject()
+        rates.forEach { (slug, rate) ->
+            values.put(slug, rate.sell.toDouble())
+        }
+        kept.put(org.json.JSONObject().put("t", timestamp).put("v", values))
+        val trimmed = org.json.JSONArray()
+        val start = (kept.length() - MAX_SAMPLES).coerceAtLeast(0)
+        for (i in start until kept.length()) trimmed.put(kept.getJSONObject(i))
+        prefs.edit().putString(KEY, trimmed.toString()).apply()
+    }
+
+    @Synchronized
+    fun read(ctx: Context, slug: String, rangeMs: Long): List<PricePoint> {
+        val prefs = ctx.applicationContext.getSharedPreferences("toman_rates", Context.MODE_PRIVATE)
+        val samples = try { org.json.JSONArray(prefs.getString(KEY, "[]") ?: "[]") }
+            catch (_: Exception) { return emptyList() }
+        val cutoff = System.currentTimeMillis() - rangeMs
+        val out = ArrayList<PricePoint>()
+        for (i in 0 until samples.length()) {
+            val item = samples.optJSONObject(i) ?: continue
+            val time = item.optLong("t")
+            val value = item.optJSONObject("v")?.optDouble(slug, Double.NaN) ?: Double.NaN
+            if (time >= cutoff && value.isFinite() && value > 0.0) out.add(PricePoint(time, value))
+        }
+        return out
     }
 }
