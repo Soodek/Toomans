@@ -79,6 +79,7 @@ data class Country(val label: String, val names: List<String>, val exclude: List
 
 object NewsCountries {
     private val map: Map<String, Country> = mapOf(
+        "irr" to Country("ایران", listOf("ایران", "تهران", "اصفهان", "شیراز", "Iran", "Tehran")),
         "usd" to Country("United States", listOf("آمریکا", "امریکا", "ایالات متحده", "واشنگتن", "United States", "USA", "US")),
         "eur" to Country("Europe (EU)", listOf("اتحادیه اروپا", "اروپا", "شنگن", "آلمان", "فرانسه", "ایتالیا", "اسپانیا", "هلند", "اتریش", "بلژیک", "یونان", "پرتغال", "ایرلند", "فنلاند")),
         "gbp" to Country("United Kingdom", listOf("بریتانیا", "انگلیس", "انگلستان", "لندن", "United Kingdom", "Britain", "London")),
@@ -279,7 +280,7 @@ fun NewsSection(slug: String, modifier: Modifier = Modifier) {
     val scope = rememberCoroutineScope()
     var result by remember { mutableStateOf<NewsResult?>(null) }
     var loading by remember { mutableStateOf(true) }
-    var migrationOnly by remember { mutableStateOf(true) }
+    var migrationOnly by remember { mutableStateOf(false) }
 
     fun load(force: Boolean) {
         scope.launch {
@@ -288,7 +289,7 @@ fun NewsSection(slug: String, modifier: Modifier = Modifier) {
             loading = false
         }
     }
-    LaunchedEffect(Unit) { load(false) }
+    LaunchedEffect(slug) { load(false) }
 
     val country = NewsCountries.of(slug)
     val list = remember(result, slug, migrationOnly) {
