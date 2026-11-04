@@ -366,7 +366,7 @@ private fun NewsImage(url: String) {
     }
     if (bitmap != null) {
         androidx.compose.foundation.Image(
-            bitmap = androidx.compose.ui.graphics.asImageBitmap(bitmap!!),
+            bitmap = bitmap!!.asImageBitmap(),
             contentDescription = null,
             contentScale = androidx.compose.ui.layout.ContentScale.Crop,
             modifier = Modifier.fillMaxWidth().height(150.dp)
