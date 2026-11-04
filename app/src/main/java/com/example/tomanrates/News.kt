@@ -150,9 +150,11 @@ object NewsCountries {
 
 object NewsRepository {
     private val FEEDS = listOf(
-        Triple("aljazeera", "Al Jazeera", "https://www.aljazeera.com/xml/rss/all.xml"),
+        Triple("aljazeera", "الجزيرة", "https://www.aljazeera.net/rss"),
         Triple("bbc", "BBC Persian", "https://feeds.bbci.co.uk/persian/rss.xml"),
-        Triple("dw", "DW Persian", "https://rss.dw.com/xml/rss-per-all_volltext"),
+        Triple("dw", "DW فارسی", "https://rss.dw.com/xml/rss-per-all_volltext"),
+        Triple("radiofarda", "رادیو فردا", "https://www.radiofarda.com/api/zrttpol-vomx-tpeoogpi"),
+        Triple("voa", "صدای آمریکا", "https://ir.voanews.com/api/zbtpil-vomx-tpeqiyp"),
     )
     private val OMAN_FEED = Triple("omanobserver", "Oman Observer", "https://www.omanobserver.om/rssFeed/home-page")
     private const val TTL_MS = 3 * 60 * 60 * 1000L      // a feed is re-downloaded at most every 3 hours
@@ -234,16 +236,20 @@ object NewsRepository {
             p.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
             p.setInput(StringReader(xml))
             var inItem = false
-            var title = ""; var link = ""; var date = ""; var desc = ""
+            var title = ""; var link = ""; var date = ""; var desc = ""; var image = ""
             var ev = p.eventType
             while (ev != XmlPullParser.END_DOCUMENT) {
                 if (ev == XmlPullParser.START_TAG) {
                     when (p.name) {
-                        "item" -> { inItem = true; title = ""; link = ""; date = ""; desc = "" }
+                        "item" -> { inItem = true; title = ""; link = ""; date = ""; desc = ""; image = "" }
                         "title" -> if (inItem) title = p.nextText()
                         "link" -> if (inItem) link = p.nextText()
                         "pubDate" -> if (inItem) date = p.nextText()
                         "description" -> if (inItem) desc = p.nextText()
+                        "enclosure", "thumbnail", "content" -> if (inItem) {
+                            val u = p.getAttributeValue(null, "url")
+                            if (u != null && u.startsWith("http") && image.isBlank()) image = u
+                        }
                     }
                 } else if (ev == XmlPullParser.END_TAG && p.name == "item" && inItem) {
                     inItem = false
@@ -317,7 +323,7 @@ fun NewsSection(slug: String, modifier: Modifier = Modifier) {
         }
         if (r != null && r.fetchedAt > 0) {
             Text(
-                "Al Jazeera · BBC Persian · DW${if (slug.substringBefore("-") == "omr") " · Oman Observer" else ""} · fetched ${Fmt.time(r.fetchedAt)}" +
+                "الجزيرة · BBC فارسی · DW فارسی · رادیو فردا · صدای آمریکا${if (slug.substringBefore("-") == "omr") " · العُمانية" else ""} · fetched ${Fmt.time(r.fetchedAt)}" +
                     (if (r.failedFeeds > 0) " · ${r.failedFeeds} feed(s) failed" else ""),
                 color = dim, fontSize = 11.sp,
             )
