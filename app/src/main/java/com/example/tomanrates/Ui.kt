@@ -20,6 +20,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -101,9 +102,18 @@ fun TomanApp(requested: String?) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.End, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                IconButton(onClick = { tab = if (tab == 6) 0 else 6 }) {
-                    Icon(imageVector = if (tab == 6) Icons.Filled.ArrowBack else Icons.Filled.Newspaper, contentDescription = if (tab == 6) "Back" else "News")
+            if (tab == 6) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.End, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    IconButton(onClick = { tab = 0 }) {
+                        Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            }
+        },
+        floatingActionButton = {
+            if (tab == 0) {
+                FloatingActionButton(onClick = { tab = 6 }) {
+                    Icon(imageVector = Icons.Filled.Newspaper, contentDescription = "News")
                 }
             }
         },
@@ -112,13 +122,13 @@ fun TomanApp(requested: String?) {
                 containerColor = MaterialTheme.colorScheme.surface,
                 tonalElevation = 0.dp,
             ) {
-                listOf("Calculator", "Currencies", "Gold", "Chart", "AI", "Settings").forEachIndexed { i, label ->
+                listOf("Calculator", "Chart", "Currencies", "Gold", "AI", "Settings").forEachIndexed { i, label ->
                     val isSelected = tab == i
                     val icon = when (i) {
                         0 -> Icons.Filled.Calculate
-                        1 -> Icons.Filled.CurrencyExchange
-                        2 -> Icons.Filled.Savings
-                        3 -> Icons.Filled.ShowChart
+                        1 -> Icons.Filled.ShowChart
+                        2 -> Icons.Filled.CurrencyExchange
+                        3 -> Icons.Filled.Savings
                         4 -> Icons.Filled.AutoAwesome
                         else -> Icons.Filled.Settings
                     }
@@ -142,9 +152,9 @@ fun TomanApp(requested: String?) {
         Box(Modifier.padding(pad).fillMaxSize()) {
             when (tab) {
                 0 -> CalculatorTab(snap, selected, slug) { slug = it }
-                1 -> CurrenciesTab(snap, selected, defaultSlug, changed)
-                2 -> GoldTab()
-                3 -> MarketChartTab(snap)
+                1 -> MarketChartTab(snap)
+                2 -> CurrenciesTab(snap, selected, defaultSlug, changed)
+                3 -> GoldTab()
                 4 -> AiAssistantTab(snap)
                 6 -> NewsHomeTab()
                 else -> SettingsTab(snap, changed)
