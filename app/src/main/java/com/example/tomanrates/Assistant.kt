@@ -45,9 +45,21 @@ object AssistantRepository {
         require(endpoint.startsWith("https://")) { "ابتدا آدرس HTTPS مربوط به Cloudflare Worker را وارد کن." }
         val market = JSONObject()
         snap.rates.values.forEach { r -> market.put(r.slug, JSONObject().put("name", r.name).put("sell_toman", r.sell.toPlainString()).put("buy_toman", r.buy?.toPlainString())) }
+        val gold = GoldRepository.snapshot(ctx)
+        val goldData = JSONObject()
+        gold?.let {
+            goldData.put("gold18_toman_per_gram", it.gold18.price.toPlainString())
+            goldData.put("gold18_high", it.gold18.high?.toPlainString())
+            goldData.put("gold18_low", it.gold18.low?.toPlainString())
+            goldData.put("emami_coin_toman", it.emamiCoin?.price?.toPlainString())
+            goldData.put("source", it.source)
+            goldData.put("updated_at", it.updatedAt)
+            goldData.put("stale", it.stale)
+        }
         val body = JSONObject()
             .put("message", prompt)
             .put("market", market)
+            .put("gold_market", goldData)
             .put("market_updated_at", snap.lastSuccessAt)
             .put("market_status", snap.status.name)
         var c: HttpURLConnection? = null
