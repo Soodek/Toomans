@@ -27,7 +27,10 @@ export default {
         body: JSON.stringify({
           model: env.OPENAI_MODEL || "gpt-4.1-mini",
           instructions: SYSTEM,
-          input: `داده بازار فعلی برنامه (ممکن است قدیمی باشد): ${market}\n\nپرسش کاربر: ${message}`,
+          input: [
+            ...(Array.isArray(body.history) ? body.history.filter(x => x && ["user", "assistant"].includes(x.role) && typeof x.content === "string").slice(-12).map(x => ({ role: x.role, content: x.content.slice(0, 4000) })) : []),
+            { role: "user", content: `داده بازار فعلی برنامه (ممکن است قدیمی باشد): ${market}\n\nپرسش کاربر: ${message}` }
+          ],
           max_output_tokens: 900,
         }),
       });
