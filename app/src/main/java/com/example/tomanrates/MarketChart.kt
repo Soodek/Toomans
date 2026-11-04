@@ -28,7 +28,7 @@ import java.math.BigDecimal
 fun MarketChartTab(snap: Snapshot) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val available = (snap.rates.keys + listOf("gold18", "coin")).distinct().sorted()
-    var selected by remember { mutableStateOf(listOf("omr", "usd", "eur").filter { it in available }.ifEmpty { available.take(1) }) }
+    var selected by remember { mutableStateOf(listOf("omr", "usd", "eur")) }
     var period by remember { mutableStateOf("روز") }
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("مقایسه بازار", fontSize = 23.sp)
