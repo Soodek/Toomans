@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -20,29 +19,21 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
-private const val AI_PREFS = "toman_ai"
-private fun aiPrefs(ctx: Context) = ctx.getSharedPreferences(AI_PREFS, Context.MODE_PRIVATE)
+private const val AI_ENDPOINT = "https://restless-block-3fc7.amirid36.workers.dev/"
 
 data class ChatLine(val role: String, val text: String)
 
 object AssistantRepository {
-    fun endpoint(ctx: Context) = aiPrefs(ctx).getString("worker_url", "") ?: ""
-    fun saveEndpoint(ctx: Context, url: String) = aiPrefs(ctx).edit().putString("worker_url", url.trim()).apply()
-
     fun ask(ctx: Context, prompt: String, snap: Snapshot, history: List<ChatLine>): String {
-        val endpoint = endpoint(ctx)
-        require(endpoint.startsWith("https://")) { "آدرس امن سرور دستیار هنوز تنظیم نشده است." }
         val market = JSONObject()
         snap.rates.values.forEach { r -> market.put(r.slug, JSONObject().put("name", r.name).put("sell_toman", r.sell.toPlainString()).put("buy_toman", r.buy?.toPlainString())) }
         val gold = GoldRepository.snapshot(ctx)
@@ -67,7 +58,7 @@ object AssistantRepository {
             .put("market_status", snap.status.name)
         var c: HttpURLConnection? = null
         try {
-            c = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+            c = (URL(AI_ENDPOINT).openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 connectTimeout = 15000
                 readTimeout = 60000
@@ -89,7 +80,6 @@ object AssistantRepository {
 fun AiAssistantTab(snap: Snapshot) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
-    var endpoint by remember { mutableStateOf(AssistantRepository.endpoint(ctx)) }
     var input by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -97,8 +87,6 @@ fun AiAssistantTab(snap: Snapshot) {
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("دستیار هوشمند بازار", fontSize = 23.sp)
         Text("تحلیل فارسی بازار با استفاده از داده‌های ارز و طلای برنامه؛ پاسخ‌ها آموزشی‌اند و توصیه قطعی سرمایه‌گذاری نیستند.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-        OutlinedTextField(endpoint, { endpoint = it }, label = { Text("آدرس سرور دستیار (HTTPS)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-        Button(onClick = { AssistantRepository.saveEndpoint(ctx, endpoint); error = "آدرس ذخیره شد." }, enabled = endpoint.startsWith("https://")) { Text("ذخیره آدرس سرور") }
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(messages) { line ->
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
