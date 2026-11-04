@@ -248,7 +248,7 @@ object NewsRepository {
                     if (title.isNotBlank() && safeLink.startsWith("https://")) {
                         val text = Html.fromHtml(desc, Html.FROM_HTML_MODE_LEGACY).toString()
                             .replace('\uFFFC', ' ').trim().take(400)
-                        out += NewsItem(title.trim(), safeLink, source, parseDate(date), text)
+                        out += NewsItem(title.trim(), safeLink, source, parseDate(date), text, image.takeIf { it.startsWith("http") })
                     }
                 }
                 ev = p.next()
