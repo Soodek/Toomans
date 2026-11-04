@@ -46,6 +46,7 @@ fun MarketChartInline(snap: Snapshot, calculatorAsset: String) {
     }
     val accent = if ((change ?: 0.0) >= 0) androidx.compose.ui.graphics.Color(0xFF36D399) else androidx.compose.ui.graphics.Color(0xFFFF6B78)
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val cardSurface = MaterialTheme.colorScheme.surface
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
             Text("نمودار بازار", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
@@ -81,7 +82,7 @@ fun MarketChartInline(snap: Snapshot, calculatorAsset: String) {
                         drawLine(accent.copy(alpha=.16f), Offset(0f,size.height*.52f), Offset(size.width,size.height*.52f), 13.dp.toPx(), cap=StrokeCap.Round)
                         drawLine(accent, Offset(0f,size.height*.52f), Offset(x,size.height*.52f), 13.dp.toPx(), cap=StrokeCap.Round)
                         drawCircle(accent, 8.dp.toPx(), Offset(x,size.height*.52f))
-                        drawCircle(MaterialTheme.colorScheme.surface, 4.dp.toPx(), Offset(x,size.height*.52f))
+                        drawCircle(cardSurface, 4.dp.toPx(), Offset(x,size.height*.52f))
                         drawLine(muted.copy(alpha=.45f), Offset(0f,size.height*.82f), Offset(0f,size.height*.25f), 1.dp.toPx())
                         drawLine(muted.copy(alpha=.45f), Offset(size.width,size.height*.82f), Offset(size.width,size.height*.25f), 1.dp.toPx())
                     }
