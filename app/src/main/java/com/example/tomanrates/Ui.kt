@@ -21,6 +21,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -39,6 +41,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.CurrencyExchange
+import androidx.compose.material.icons.filled.Savings
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Calculate as CalculateOutline
+import androidx.compose.material.icons.outlined.CurrencyExchange as CurrencyExchangeOutline
+import androidx.compose.material.icons.outlined.Savings as SavingsOutline
+import androidx.compose.material.icons.outlined.Settings as SettingsOutline
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -89,9 +100,31 @@ fun TomanApp(requested: String?) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = 0.dp,
+            ) {
                 listOf("Calculator", "Currencies", "Gold", "Settings").forEachIndexed { i, label ->
-                    NavigationBarItem(selected = tab == i, onClick = { tab = i }, icon = {}, label = { Text(label) })
+                    val isSelected = tab == i
+                    val icon = when (i) {
+                        0 -> if (isSelected) Icons.Filled.Calculate else CalculateOutline
+                        1 -> if (isSelected) Icons.Filled.CurrencyExchange else CurrencyExchangeOutline
+                        2 -> if (isSelected) Icons.Filled.Savings else SavingsOutline
+                        else -> if (isSelected) Icons.Filled.Settings else SettingsOutline
+                    }
+                    NavigationBarItem(
+                        selected = isSelected,
+                        onClick = { tab = i },
+                        icon = { Icon(imageVector = icon, contentDescription = label) },
+                        label = { Text(label) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            indicatorColor = Color(0xFF24364A),
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
+                    )
                 }
             }
         },
