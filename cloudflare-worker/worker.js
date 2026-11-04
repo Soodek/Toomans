@@ -104,35 +104,44 @@ export default {
 - پیش‌بینی را احتمال بدان، نه قطعیت.
 - توصیه قطعی خرید یا فروش نده؛ ریسک و افق زمانی را توضیح بده.
 - اگر سؤال به خبر یا داده زنده نیاز دارد و داده‌ای در اختیار نداری، این محدودیت را اعلام کن.
-- پاسخ‌ها را متناسب با سؤال، کاربردی و بدون حاشیه بنویس.
+- پاسخ‌ها را کوتاه، کاربردی و بدون حاشیه بنویس؛ معمولاً زیر ۲۰۰ کلمه.
 
 داده‌های فعلی برنامه:
 ${JSON.stringify(marketContext)}
 `;
 
-      const history = Array.isArray(body.history) ? body.history.slice(-10) : [];
+      const history = Array.isArray(body.history) ? body.history.slice(-6) : [];
       const messages = [{ role: "system", content: system }];
 
       for (const item of history) {
         const role = item && item.role === "assistant" ? "assistant" : "user";
-        const content = String(item && item.content || "").slice(0, 3000);
+        const content = String(item && item.content || "").slice(0, 1500);
         if (content) messages.push({ role, content });
       }
       messages.push({ role: "user", content: message });
 
-      const result = await env.AI.run(MODEL, {
+      const stream = await env.AI.run(MODEL, {
         messages,
-        max_tokens: 1100,
-        temperature: 0.45
+        max_tokens: 500,
+        temperature: 0.45,
+        stream: true
       });
 
-      const reply = String(result && (result.response || result.result && result.result.response) || "").trim();
-
-      if (!reply) {
-        return response({ error: "AI returned an empty response" }, 502);
+      if (!stream || typeof stream.getReader !== "function") {
+        return response({ error: "AI streaming is unavailable for this model" }, 502);
       }
 
-      return response({ reply });
+      return new Response(stream, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/event-stream; charset=utf-8",
+          "Cache-Control": "no-cache, no-transform",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+          "X-Accel-Buffering": "no"
+        }
+      });
     } catch (error) {
       return response({
         error: error && error.message ? error.message : "Internal server error"
