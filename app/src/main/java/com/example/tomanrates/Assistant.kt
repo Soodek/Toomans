@@ -40,7 +40,7 @@ object AssistantRepository {
     fun endpoint(ctx: Context) = aiPrefs(ctx).getString("worker_url", "") ?: ""
     fun saveEndpoint(ctx: Context, url: String) = aiPrefs(ctx).edit().putString("worker_url", url.trim()).apply()
 
-    fun ask(ctx: Context, prompt: String, snap: Snapshot): String {
+    fun ask(ctx: Context, prompt: String, snap: Snapshot, history: List<ChatLine>): String {
         val endpoint = endpoint(ctx)
         require(endpoint.startsWith("https://")) { "ابتدا آدرس HTTPS مربوط به Cloudflare Worker را وارد کن." }
         val market = JSONObject()
@@ -56,8 +56,11 @@ object AssistantRepository {
             goldData.put("updated_at", it.updatedAt)
             goldData.put("stale", it.stale)
         }
+        val historyJson = org.json.JSONArray()
+        history.takeLast(12).forEach { historyJson.put(JSONObject().put("role", it.role).put("content", it.text)) }
         val body = JSONObject()
             .put("message", prompt)
+            .put("history", historyJson)
             .put("market", market)
             .put("gold_market", goldData)
             .put("market_updated_at", snap.lastSuccessAt)
@@ -113,7 +116,7 @@ fun AiAssistantTab(snap: Snapshot) {
                 val q = input.trim(); input = ""; messages.add(ChatLine("user", q)); busy = true; error = null
                 scope.launch {
                     try {
-                        val answer = withContext(Dispatchers.IO) { AssistantRepository.ask(ctx, q, snap) }
+                        val answer = withContext(Dispatchers.IO) { AssistantRepository.ask(ctx, q, snap, messages.toList()) }
                         messages.add(ChatLine("assistant", answer))
                     } catch (e: Exception) { error = e.message ?: "ارتباط با دستیار ناموفق بود." }
                     finally { busy = false }
