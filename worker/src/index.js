@@ -11,11 +11,16 @@ export default {
     if (request.method === "OPTIONS") return new Response(null, { headers: cors });
     if (request.method !== "POST") return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: cors });
     if (!env.OPENAI_API_KEY) return new Response(JSON.stringify({ error: "Server is not configured" }), { status: 503, headers: cors });
+    const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+    if (env.RATE_LIMITER) {
+      const { success } = await env.RATE_LIMITER.limit({ key: ip });
+      if (!success) return new Response(JSON.stringify({ error: "Rate limit exceeded; try again shortly." }), { status: 429, headers: cors });
+    }
     try {
       const body = await request.json();
       const message = String(body.message || "").trim();
       if (!message || message.length > 4000) return new Response(JSON.stringify({ error: "Message must be 1–4000 characters" }), { status: 400, headers: cors });
-      const market = JSON.stringify({ status: body.market_status, updated_at: body.market_updated_at, rates: body.market || {} });
+      const market = JSON.stringify({ status: body.market_status, updated_at: body.market_updated_at, rates: body.market || {}, Iran_gold_and_coin: body.gold_market || {} });
       const response = await fetch("https://api.openai.com/v1/responses", {
         method: "POST",
         headers: { "Authorization": `Bearer ${env.OPENAI_API_KEY}`, "Content-Type": "application/json" },
