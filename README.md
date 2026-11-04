@@ -12,6 +12,12 @@ Alanchand returns. Kotlin, RemoteViews widget, Compose app, WorkManager. No thir
 4. Open the app > Settings > paste your Alanchand token > "Save token and update".
 5. Long-press the home screen > Widgets > Toman Rates. Resize to show more currencies.
 
+## Iran gold market
+- The Gold tab fetches Iran-market data from `iran-market/iran-market.github.io` (the API states its source as TGJU / Nobitex).
+- Shows 18K gold per gram and Emami coin prices, market change percentage, daily high/low, source timestamp, and stale-data warnings.
+- 24K is displayed as a mathematical equivalent derived from the 18K quote (18K × 24 / 18), not as a separate live market quote.
+- The built-in gram/karat calculator estimates metal value only; it excludes making charges, tax, seller margin, and coin premium. Last successful JSON response is cached locally for offline viewing.
+
 ## How it works
  require API token one call returns every currency
   (observed: 44 entries) as `{slug: {sell, buy, dolar_rate, open, high, low, dayChange, updated_at, name}}`.
