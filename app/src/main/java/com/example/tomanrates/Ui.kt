@@ -90,7 +90,7 @@ fun TomanApp(requested: String?) {
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             NavigationBar {
-                listOf("Calculator", "Currencies", "Settings").forEachIndexed { i, label ->
+                listOf("Calculator", "Currencies", "Gold", "Settings").forEachIndexed { i, label ->
                     NavigationBarItem(selected = tab == i, onClick = { tab = i }, icon = {}, label = { Text(label) })
                 }
             }
@@ -100,7 +100,7 @@ fun TomanApp(requested: String?) {
             when (tab) {
                 0 -> CalculatorTab(snap, selected, slug) { slug = it }
                 1 -> CurrenciesTab(snap, selected, defaultSlug, changed)
-                else -> SettingsTab(snap, changed)
+                2 -> GoldTab()\n                else -> SettingsTab(snap, changed)
             }
         }
     }
