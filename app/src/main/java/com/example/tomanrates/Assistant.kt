@@ -128,7 +128,7 @@ fun AiAssistantTab(snap: Snapshot) {
                     try {
                         withContext(Dispatchers.IO) {
                             AssistantRepository.askStream(ctx, q, snap, history) { chunk ->
-                                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                                scope.launch(Dispatchers.Main) {
                                     val old = messages[answerIndex].text
                                     messages[answerIndex] = ChatLine("assistant", old + chunk)
                                 }
