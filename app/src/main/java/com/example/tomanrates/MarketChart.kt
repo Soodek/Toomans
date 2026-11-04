@@ -1,16 +1,16 @@
 package com.example.tomanrates
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -20,73 +20,79 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
 import java.math.BigDecimal
 
 @Composable
-fun MarketChartTab(snap: Snapshot) {
-    val ctx = androidx.compose.ui.platform.LocalContext.current
-    val available = (snap.rates.keys + listOf("gold18", "coin")).distinct().sorted()
-    var selected by remember { mutableStateOf(listOf("omr", "usd", "eur")) }
-    var period by remember { mutableStateOf("روز") }
-    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("مقایسه بازار", fontSize = 23.sp)
-        Text("دارایی‌ها را برای مقایسه انتخاب کن؛ هرکدام مقیاس قیمت مستقل دارد.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            items(available) { asset ->
-                val label = when(asset) { "gold18" -> "طلای ۱۸"; "coin" -> "سکه امامی"; else -> Catalog.code(asset) }
-                FilterChip(selected = asset in selected, onClick = {
-                    selected = if (asset in selected) {
-                        if (selected.size > 1) selected - asset else selected
-                    } else selected + asset
-                }, label = { Text(label) })
-            }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            listOf("روز", "هفته", "ماه", "سال").forEach { p ->
-                FilterChip(selected = period == p, onClick = { period = p }, label = { Text(p) })
-            }
-        }
-        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(selected, key = { it }) { asset -> MarketAssetCard(snap, asset, period, ctx) }
-        }
-    }
-}
-
-@Composable
-private fun MarketAssetCard(snap: Snapshot, asset: String, period: String, ctx: android.content.Context) {
+fun MarketChartInline(snap: Snapshot, calculatorAsset: String) {
+    val ctx = LocalContext.current
+    val assets = (snap.rates.keys + listOf("gold18", "coin")).distinct().sorted()
+    var asset by remember(calculatorAsset) { mutableStateOf(calculatorAsset) }
     val rate = snap.rates[asset]
-    val gold = if (asset == "gold18" || asset == "coin") GoldRepository.snapshot(ctx) else null
-    val quote = when(asset) { "gold18" -> gold?.gold18; "coin" -> gold?.emamiCoin; else -> null }
-    val value = quote?.price ?: rate?.sell
+    val gold = remember(asset) { if (asset == "gold18" || asset == "coin") GoldRepository.snapshot(ctx) else null }
+    val quote = when (asset) { "gold18" -> gold?.gold18; "coin" -> gold?.emamiCoin; else -> null }
+    val current = quote?.price ?: rate?.sell
     val high = quote?.high ?: rate?.high
     val low = quote?.low ?: rate?.low
-    val open = rate?.open
     val change = quote?.changePct ?: rate?.dayChange?.toDouble()
-    val lineColor = MaterialTheme.colorScheme.primary
-    val gridColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .25f)
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(when(asset) { "gold18" -> "طلای ۱۸ عیار"; "coin" -> "سکه امامی"; else -> Catalog.englishName(asset, rate?.name) + " · " + Catalog.code(asset) }, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(value?.let { Fmt.toman(it) + " تومان" } ?: "داده‌ای موجود نیست", fontSize = 22.sp)
-            if (change != null) Text("تغییر روزانه: ${if (change > 0) "+" else ""}${"%.2f".format(java.util.Locale.US, change)}٪", fontSize = 12.sp)
-            if (period == "روز" && value != null && high != null && low != null) {
-                Canvas(Modifier.fillMaxWidth().height(110.dp)) {
-                    val min = low.toFloat()
-                    val max = high.toFloat()
-                    val span = (max - min).coerceAtLeast(1f)
-                    fun y(v: BigDecimal) = size.height - ((v.toFloat() - min) / span * size.height * .76f + size.height * .12f)
-                    val center = size.width / 2f
-                    drawLine(gridColor, Offset(0f, size.height*.12f), Offset(size.width, size.height*.12f), 1.dp.toPx())
-                    drawLine(gridColor, Offset(0f, size.height*.88f), Offset(size.width, size.height*.88f), 1.dp.toPx())
-                    drawLine(lineColor, Offset(center, y(high)), Offset(center, y(low)), 3.dp.toPx(), cap=StrokeCap.Round)
-                    open?.let { drawLine(lineColor, Offset(center-22.dp.toPx(), y(it)), Offset(center, y(it)), 3.dp.toPx(), cap=StrokeCap.Round) }
-                    drawLine(lineColor, Offset(center, y(value)), Offset(center+22.dp.toPx(), y(value)), 3.dp.toPx(), cap=StrokeCap.Round)
+    val name = when(asset) {
+        "gold18" -> "طلای ۱۸ عیار"
+        "coin" -> "سکه امامی"
+        else -> "${Catalog.flag(asset)}  ${Catalog.code(asset)} · ${Catalog.englishName(asset, rate?.name)}"
+    }
+    val accent = if ((change ?: 0.0) >= 0) androidx.compose.ui.graphics.Color(0xFF36D399) else androidx.compose.ui.graphics.Color(0xFFFF6B78)
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Text("نمودار بازار", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Text("نمای روزانه", color = muted, fontSize = 12.sp)
+        }
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            items(assets) { item ->
+                FilterChip(selected = asset == item, onClick = { asset = item }, label = {
+                    Text(when(item) { "gold18" -> "طلا"; "coin" -> "سکه"; else -> Catalog.code(item) })
+                })
+            }
+        }
+        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(22.dp)) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(name, color = muted, fontSize = 13.sp)
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text(current?.let { Fmt.toman(it) } ?: "—", fontSize = 27.sp, fontWeight = FontWeight.Bold)
+                        Text("تومان", color = muted, fontSize = 12.sp)
+                    }
+                    if (change != null) {
+                        Text("${if (change >= 0) "▲ +" else "▼ "}${"%.2f".format(java.util.Locale.US, change)}٪",
+                            color = accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.background(accent.copy(alpha=.12f), RoundedCornerShape(12.dp)).padding(horizontal=10.dp, vertical=7.dp))
+                    }
                 }
-                Text("کمینه: ${Fmt.toman(low)} · بیشینه: ${Fmt.toman(high)}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            } else {
-                Text(if (period == "روز") "بازه روزانه از منبع در دسترس نیست." else "تاریخچه ${period} در API فعلی وجود ندارد؛ برای جلوگیری از نمایش داده ساختگی، نمودار تاریخی نشان داده نمی‌شود.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                if (current != null && high != null && low != null && high > low) {
+                    Canvas(Modifier.fillMaxWidth().height(112.dp)) {
+                        val min = low.toFloat(); val max = high.toFloat(); val v = current.toFloat()
+                        val span = (max-min).coerceAtLeast(1f)
+                        val x = ((v-min)/span).coerceIn(0f,1f)*size.width
+                        // Range track with current quote marker (actual provider range, not fabricated history).
+                        drawLine(accent.copy(alpha=.16f), Offset(0f,size.height*.52f), Offset(size.width,size.height*.52f), 13.dp.toPx(), cap=StrokeCap.Round)
+                        drawLine(accent, Offset(0f,size.height*.52f), Offset(x,size.height*.52f), 13.dp.toPx(), cap=StrokeCap.Round)
+                        drawCircle(accent, 8.dp.toPx(), Offset(x,size.height*.52f))
+                        drawCircle(MaterialTheme.colorScheme.surface, 4.dp.toPx(), Offset(x,size.height*.52f))
+                        drawLine(muted.copy(alpha=.45f), Offset(0f,size.height*.82f), Offset(0f,size.height*.25f), 1.dp.toPx())
+                        drawLine(muted.copy(alpha=.45f), Offset(size.width,size.height*.82f), Offset(size.width,size.height*.25f), 1.dp.toPx())
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Column { Text("کمترین", color=muted, fontSize=11.sp); Text(Fmt.toman(low), fontSize=12.sp) }
+                        Column(horizontalAlignment=androidx.compose.ui.Alignment.End) { Text("بیشترین", color=muted, fontSize=11.sp); Text(Fmt.toman(high), fontSize=12.sp) }
+                    }
+                } else {
+                    Text("اطلاعات بازه روزانه برای این دارایی موجود نیست.", color=muted, fontSize=12.sp)
+                }
+                Text("موقعیت قیمت فعلی در بازه روز · داده واقعی منبع", color=muted, fontSize=11.sp)
             }
         }
     }
