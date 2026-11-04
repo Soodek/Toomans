@@ -116,7 +116,7 @@ fun AiAssistantTab(snap: Snapshot) {
                 val q = input.trim(); input = ""; messages.add(ChatLine("user", q)); busy = true; error = null
                 scope.launch {
                     try {
-                        val answer = withContext(Dispatchers.IO) { AssistantRepository.ask(ctx, q, snap, messages.toList()) }
+                        val answer = withContext(Dispatchers.IO) { AssistantRepository.ask(ctx, q, snap, messages.dropLast(1).toList()) }
                         messages.add(ChatLine("assistant", answer))
                     } catch (e: Exception) { error = e.message ?: "ارتباط با دستیار ناموفق بود." }
                     finally { busy = false }
