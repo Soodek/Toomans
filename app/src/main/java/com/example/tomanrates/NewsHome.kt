@@ -26,7 +26,7 @@ fun NewsHomeTab() {
         }
         if (country == "irr") {
             Text("برای ایران، فیدهای فارسی عمومی نمایش داده می‌شوند. فیلتر موضوعی ایران در حال حاضر محدود به تشخیص نام کشور در عنوان/خلاصه است.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-            NewsSection("usd", Modifier.weight(1f).fillMaxWidth())
+            NewsSection("irr", Modifier.weight(1f).fillMaxWidth())
         } else NewsSection(country, Modifier.weight(1f).fillMaxWidth())
     }
 }
