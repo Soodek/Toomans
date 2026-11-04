@@ -49,7 +49,7 @@ import java.util.Locale
  * feeds, so "news about a country" means: the item's title/summary names that country. Nothing is generated,
  * translated or summarised; every item links to the original article.
  */
-data class NewsItem(val title: String, val link: String, val source: String, val at: Long, val text: String)
+data class NewsItem(val title: String, val link: String, val source: String, val at: Long, val text: String, val imageUrl: String? = null)
 data class NewsResult(val items: List<NewsItem>, val fetchedAt: Long, val failedFeeds: Int)
 
 // ------------------------------------------------------------------ text helpers
@@ -149,21 +149,23 @@ object NewsCountries {
 
 object NewsRepository {
     private val FEEDS = listOf(
+        Triple("aljazeera", "Al Jazeera", "https://www.aljazeera.com/xml/rss/all.xml"),
         Triple("bbc", "BBC Persian", "https://feeds.bbci.co.uk/persian/rss.xml"),
         Triple("dw", "DW Persian", "https://rss.dw.com/xml/rss-per-all_volltext"),
     )
+    private val OMAN_FEED = Triple("omanobserver", "Oman Observer", "https://www.omanobserver.om/rssFeed/home-page")
     private const val TTL_MS = 3 * 60 * 60 * 1000L      // a feed is re-downloaded at most every 3 hours
     private const val MIN_FORCE_MS = 10 * 60 * 1000L    // the Refresh button cannot go below 10 minutes
     private const val MAX_BYTES = 4_000_000
 
     /** Blocking: call from Dispatchers.IO. Uses the cached copy when it is fresh or when the download fails. */
     @Synchronized
-    fun load(ctx: Context, force: Boolean): NewsResult {
+    fun load(ctx: Context, force: Boolean, slug: String): NewsResult {
         val now = System.currentTimeMillis()
         val all = ArrayList<NewsItem>()
         var failed = 0
         var newest = 0L
-        for ((id, name, url) in FEEDS) {
+        for ((id, name, url) in (FEEDS + if (slug.substringBefore("-") == "omr") listOf(OMAN_FEED) else emptyList())) {
             val f = File(ctx.cacheDir, "news_$id.xml")
             val age = if (f.exists()) now - f.lastModified() else Long.MAX_VALUE
             var xml: String? = null
@@ -274,7 +276,7 @@ fun NewsSection(slug: String, modifier: Modifier = Modifier) {
     fun load(force: Boolean) {
         scope.launch {
             loading = true
-            result = withContext(Dispatchers.IO) { NewsRepository.load(ctx, force) }
+            result = withContext(Dispatchers.IO) { NewsRepository.load(ctx, force, slug) }
             loading = false
         }
     }
@@ -289,7 +291,7 @@ fun NewsSection(slug: String, modifier: Modifier = Modifier) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "News · ${country?.label ?: Catalog.code(slug)}",
+                "${Catalog.flag(slug)}  News · ${country?.label ?: Catalog.code(slug)}",
                 fontSize = 18.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f),
             )
             TextButton(onClick = { load(true) }, enabled = !loading) { Text(if (loading) "Loading…" else "Refresh") }
@@ -314,7 +316,7 @@ fun NewsSection(slug: String, modifier: Modifier = Modifier) {
         }
         if (r != null && r.fetchedAt > 0) {
             Text(
-                "BBC Persian · DW Persian · fetched ${Fmt.time(r.fetchedAt)}" +
+                "Al Jazeera · BBC Persian · DW${if (slug.substringBefore("-") == "omr") " · Oman Observer" else ""} · fetched ${Fmt.time(r.fetchedAt)}" +
                     (if (r.failedFeeds > 0) " · ${r.failedFeeds} feed(s) failed" else ""),
                 color = dim, fontSize = 11.sp,
             )
@@ -329,11 +331,37 @@ private fun NewsCard(n: NewsItem, onClick: () -> Unit) {
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
     ) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (n.imageUrl != null) NewsImage(n.imageUrl)
             Text(n.title, fontSize = 15.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
             Text(
                 n.source + (if (n.at > 0) " · ${Fmt.time(n.at)}" else ""),
                 fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+ 
+@Composable
+private fun NewsImage(url: String) {
+    val bitmap by androidx.compose.runtime.produceState<android.graphics.Bitmap?>(initialValue = null, url) {
+        value = withContext(Dispatchers.IO) {
+            try {
+                val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 10000
+                    readTimeout = 15000
+                    setRequestProperty("User-Agent", "TomanRates/1.0")
+                }
+                conn.inputStream.use { android.graphics.BitmapFactory.decodeStream(it) }.also { conn.disconnect() }
+            } catch (_: Exception) { null }
+        }
+    }
+    if (bitmap != null) {
+        androidx.compose.foundation.Image(
+            bitmap = androidx.compose.ui.graphics.asImageBitmap(bitmap!!),
+            contentDescription = null,
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+            modifier = Modifier.fillMaxWidth().height(150.dp)
+        )
     }
 }
