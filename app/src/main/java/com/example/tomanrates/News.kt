@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -26,6 +27,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
@@ -49,7 +51,7 @@ import java.util.Locale
  * feeds, so "news about a country" means: the item's title/summary names that country. Nothing is generated,
  * translated or summarised; every item links to the original article.
  */
-data class NewsItem(val title: String, val link: String, val source: String, val at: Long, val text: String)
+data class NewsItem(val title: String, val link: String, val source: String, val at: Long, val text: String, val imageUrl: String? = null)
 data class NewsResult(val items: List<NewsItem>, val fetchedAt: Long, val failedFeeds: Int)
 
 // ------------------------------------------------------------------ text helpers
@@ -77,38 +79,38 @@ data class Country(val label: String, val names: List<String>, val exclude: List
 
 object NewsCountries {
     private val map: Map<String, Country> = mapOf(
-        "usd" to Country("United States", listOf("آمریکا", "امریکا", "ایالات متحده", "واشنگتن")),
+        "usd" to Country("United States", listOf("آمریکا", "امریکا", "ایالات متحده", "واشنگتن", "United States", "USA", "US")),
         "eur" to Country("Europe (EU)", listOf("اتحادیه اروپا", "اروپا", "شنگن", "آلمان", "فرانسه", "ایتالیا", "اسپانیا", "هلند", "اتریش", "بلژیک", "یونان", "پرتغال", "ایرلند", "فنلاند")),
-        "gbp" to Country("United Kingdom", listOf("بریتانیا", "انگلیس", "انگلستان", "لندن")),
-        "aed" to Country("UAE", listOf("امارات", "دبی", "ابوظبی", "شارجه")),
-        "omr" to Country("Oman", listOf("عمان", "مسقط"), listOf("دریای عمان", "خلیج عمان")),
-        "try" to Country("Turkey", listOf("ترکیه", "استانبول", "آنکارا")),
-        "cny" to Country("China", listOf("چین", "پکن")),
-        "cad" to Country("Canada", listOf("کانادا", "تورنتو", "ونکوور")),
-        "aud" to Country("Australia", listOf("استرالیا", "سیدنی", "ملبورن")),
-        "rub" to Country("Russia", listOf("روسیه", "مسکو")),
-        "iqd" to Country("Iraq", listOf("عراق", "بغداد")),
+        "gbp" to Country("United Kingdom", listOf("بریتانیا", "انگلیس", "انگلستان", "لندن", "United Kingdom", "Britain", "London")),
+        "aed" to Country("UAE", listOf("امارات", "دبی", "ابوظبی", "شارجه", "UAE", "Dubai", "Abu Dhabi")),
+        "omr" to Country("Oman", listOf("عمان", "مسقط", "Oman", "Muscat"), listOf("دریای عمان", "خلیج عمان", "Gulf of Oman")),
+        "try" to Country("Turkey", listOf("ترکیه", "استانبول", "آنکارا", "Turkey", "Istanbul", "Ankara")),
+        "cny" to Country("China", listOf("چین", "پکن", "China", "Beijing")),
+        "cad" to Country("Canada", listOf("کانادا", "تورنتو", "ونکوور", "Canada", "Toronto", "Vancouver")),
+        "aud" to Country("Australia", listOf("استرالیا", "سیدنی", "ملبورن", "Australia", "Sydney", "Melbourne")),
+        "rub" to Country("Russia", listOf("روسیه", "مسکو", "Russia", "Moscow")),
+        "iqd" to Country("Iraq", listOf("عراق", "بغداد", "Iraq", "Baghdad")),
         "myr" to Country("Malaysia", listOf("مالزی", "کوالالامپور")),
         "gel" to Country("Georgia", listOf("گرجستان", "تفلیس")),
         "azn" to Country("Azerbaijan", listOf("جمهوری آذربایجان", "باکو")),
         "amd" to Country("Armenia", listOf("ارمنستان", "ایروان")),
         "thb" to Country("Thailand", listOf("تایلند", "بانکوک")),
-        "inr" to Country("India", listOf("هند", "دهلی"), listOf("اقیانوس هند")),
-        "pkr" to Country("Pakistan", listOf("پاکستان", "اسلام آباد")),
-        "jpy" to Country("Japan", listOf("ژاپن", "توکیو")),
-        "sar" to Country("Saudi Arabia", listOf("عربستان", "ریاض")),
-        "afn" to Country("Afghanistan", listOf("افغانستان", "کابل")),
+        "inr" to Country("India", listOf("هند", "دهلی", "India", "New Delhi"), listOf("اقیانوس هند", "Indian Ocean")),
+        "pkr" to Country("Pakistan", listOf("پاکستان", "اسلام آباد", "Pakistan", "Islamabad")),
+        "jpy" to Country("Japan", listOf("ژاپن", "توکیو", "Japan", "Tokyo")),
+        "sar" to Country("Saudi Arabia", listOf("عربستان", "ریاض", "Saudi Arabia", "Riyadh")),
+        "afn" to Country("Afghanistan", listOf("افغانستان", "کابل", "Afghanistan", "Kabul")),
         "sek" to Country("Sweden", listOf("سوئد", "استکهلم")),
         "chf" to Country("Switzerland", listOf("سوئیس", "ژنو", "زوریخ")),
-        "qar" to Country("Qatar", listOf("قطر", "دوحه")),
+        "qar" to Country("Qatar", listOf("قطر", "دوحه", "Qatar", "Doha")),
         "krw" to Country("South Korea", listOf("کره جنوبی", "سئول")),
         "nok" to Country("Norway", listOf("نروژ", "اسلو")),
         "nzd" to Country("New Zealand", listOf("نیوزیلند", "زلاند نو")),
         "sgd" to Country("Singapore", listOf("سنگاپور")),
         "hkd" to Country("Hong Kong", listOf("هنگ کنگ", "هنگکنگ")),
-        "kwd" to Country("Kuwait", listOf("کویت")),
+        "kwd" to Country("Kuwait", listOf("کویت", "Kuwait")),
         "dkk" to Country("Denmark", listOf("دانمارک", "کپنهاگ")),
-        "bhd" to Country("Bahrain", listOf("بحرین", "منامه")),
+        "bhd" to Country("Bahrain", listOf("بحرین", "منامه", "Bahrain", "Manama")),
         "tjs" to Country("Tajikistan", listOf("تاجیکستان", "دوشنبه")),
         "tmt" to Country("Turkmenistan", listOf("ترکمنستان", "عشق آباد")),
         "kgs" to Country("Kyrgyzstan", listOf("قرقیزستان", "بیشکک")),
@@ -120,7 +122,7 @@ object NewsCountries {
     /** Words that make an item about migration, residency, visas or work permits (matched inside words on purpose). */
     private val MIGRATION: List<String> = listOf(
         "مهاجر", "ویزا", "روادید", "اقامت", "پناهندگی", "پناهجو", "پناهنده", "تابعیت", "شهروندی",
-        "اجازه کار", "مجوز کار", "دیپورت", "شنگن", "گرین کارت",
+        "اجازه کار", "مجوز کار", "دیپورت", "شنگن", "گرین کارت", "visa", "immigration", "residency", "migrant", "migration", "work permit",
     ).map { NewsText.norm(it) }
 
     private val regexCache = HashMap<String, Regex>()
@@ -149,21 +151,25 @@ object NewsCountries {
 
 object NewsRepository {
     private val FEEDS = listOf(
+        Triple("aljazeera", "الجزيرة", "https://www.aljazeera.net/rss"),
         Triple("bbc", "BBC Persian", "https://feeds.bbci.co.uk/persian/rss.xml"),
-        Triple("dw", "DW Persian", "https://rss.dw.com/xml/rss-per-all_volltext"),
+        Triple("dw", "DW فارسی", "https://rss.dw.com/xml/rss-per-all_volltext"),
+        Triple("radiofarda", "رادیو فردا", "https://www.radiofarda.com/api/zrttpol-vomx-tpeoogpi"),
+        Triple("voa", "صدای آمریکا", "https://ir.voanews.com/api/zbtpil-vomx-tpeqiyp"),
     )
+    private val OMAN_FEED = Triple("omanobserver", "Oman Observer", "https://www.omanobserver.om/rssFeed/home-page")
     private const val TTL_MS = 3 * 60 * 60 * 1000L      // a feed is re-downloaded at most every 3 hours
     private const val MIN_FORCE_MS = 10 * 60 * 1000L    // the Refresh button cannot go below 10 minutes
     private const val MAX_BYTES = 4_000_000
 
     /** Blocking: call from Dispatchers.IO. Uses the cached copy when it is fresh or when the download fails. */
     @Synchronized
-    fun load(ctx: Context, force: Boolean): NewsResult {
+    fun load(ctx: Context, force: Boolean, slug: String): NewsResult {
         val now = System.currentTimeMillis()
         val all = ArrayList<NewsItem>()
         var failed = 0
         var newest = 0L
-        for ((id, name, url) in FEEDS) {
+        for ((id, name, url) in (FEEDS + if (slug.substringBefore("-") == "omr") listOf(OMAN_FEED) else emptyList())) {
             val f = File(ctx.cacheDir, "news_$id.xml")
             val age = if (f.exists()) now - f.lastModified() else Long.MAX_VALUE
             var xml: String? = null
@@ -231,16 +237,20 @@ object NewsRepository {
             p.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
             p.setInput(StringReader(xml))
             var inItem = false
-            var title = ""; var link = ""; var date = ""; var desc = ""
+            var title = ""; var link = ""; var date = ""; var desc = ""; var image = ""
             var ev = p.eventType
             while (ev != XmlPullParser.END_DOCUMENT) {
                 if (ev == XmlPullParser.START_TAG) {
                     when (p.name) {
-                        "item" -> { inItem = true; title = ""; link = ""; date = ""; desc = "" }
+                        "item" -> { inItem = true; title = ""; link = ""; date = ""; desc = ""; image = "" }
                         "title" -> if (inItem) title = p.nextText()
                         "link" -> if (inItem) link = p.nextText()
                         "pubDate" -> if (inItem) date = p.nextText()
                         "description" -> if (inItem) desc = p.nextText()
+                        "enclosure", "thumbnail", "content" -> if (inItem) {
+                            val u = p.getAttributeValue(null, "url")
+                            if (u != null && u.startsWith("http") && image.isBlank()) image = u
+                        }
                     }
                 } else if (ev == XmlPullParser.END_TAG && p.name == "item" && inItem) {
                     inItem = false
@@ -248,7 +258,7 @@ object NewsRepository {
                     if (title.isNotBlank() && safeLink.startsWith("https://")) {
                         val text = Html.fromHtml(desc, Html.FROM_HTML_MODE_LEGACY).toString()
                             .replace('\uFFFC', ' ').trim().take(400)
-                        out += NewsItem(title.trim(), safeLink, source, parseDate(date), text)
+                        out += NewsItem(title.trim(), safeLink, source, parseDate(date), text, image.takeIf { it.startsWith("http") })
                     }
                 }
                 ev = p.next()
@@ -274,7 +284,7 @@ fun NewsSection(slug: String, modifier: Modifier = Modifier) {
     fun load(force: Boolean) {
         scope.launch {
             loading = true
-            result = withContext(Dispatchers.IO) { NewsRepository.load(ctx, force) }
+            result = withContext(Dispatchers.IO) { NewsRepository.load(ctx, force, slug) }
             loading = false
         }
     }
@@ -289,7 +299,7 @@ fun NewsSection(slug: String, modifier: Modifier = Modifier) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "News · ${country?.label ?: Catalog.code(slug)}",
+                "${Catalog.flag(slug)}  News · ${country?.label ?: Catalog.code(slug)}",
                 fontSize = 18.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f),
             )
             TextButton(onClick = { load(true) }, enabled = !loading) { Text(if (loading) "Loading…" else "Refresh") }
@@ -314,7 +324,7 @@ fun NewsSection(slug: String, modifier: Modifier = Modifier) {
         }
         if (r != null && r.fetchedAt > 0) {
             Text(
-                "BBC Persian · DW Persian · fetched ${Fmt.time(r.fetchedAt)}" +
+                "الجزيرة · BBC فارسی · DW فارسی · رادیو فردا · صدای آمریکا${if (slug.substringBefore("-") == "omr") " · العُمانية" else ""} · fetched ${Fmt.time(r.fetchedAt)}" +
                     (if (r.failedFeeds > 0) " · ${r.failedFeeds} feed(s) failed" else ""),
                 color = dim, fontSize = 11.sp,
             )
@@ -329,11 +339,37 @@ private fun NewsCard(n: NewsItem, onClick: () -> Unit) {
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
     ) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (n.imageUrl != null) NewsImage(n.imageUrl)
             Text(n.title, fontSize = 15.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
             Text(
                 n.source + (if (n.at > 0) " · ${Fmt.time(n.at)}" else ""),
                 fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+ 
+@Composable
+private fun NewsImage(url: String) {
+    val bitmap by androidx.compose.runtime.produceState<android.graphics.Bitmap?>(initialValue = null, url) {
+        value = withContext(Dispatchers.IO) {
+            try {
+                val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 10000
+                    readTimeout = 15000
+                    setRequestProperty("User-Agent", "TomanRates/1.0")
+                }
+                conn.inputStream.use { android.graphics.BitmapFactory.decodeStream(it) }.also { conn.disconnect() }
+            } catch (_: Exception) { null }
+        }
+    }
+    if (bitmap != null) {
+        androidx.compose.foundation.Image(
+            bitmap = bitmap!!.asImageBitmap(),
+            contentDescription = null,
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+            modifier = Modifier.fillMaxWidth().height(150.dp)
+        )
     }
 }
