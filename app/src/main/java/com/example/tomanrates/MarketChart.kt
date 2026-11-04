@@ -56,12 +56,12 @@ fun MarketChartTab(snap: Snapshot) {
                         val max = high.toFloat()
                         val span = (max - min).coerceAtLeast(1f)
                         fun y(v: BigDecimal) = size.height - ((v.toFloat() - min) / span * size.height * .76f + size.height * .12f)
+                        val center = size.width / 2f
                         drawLine(gridColor, Offset(0f, size.height*.12f), Offset(size.width, size.height*.12f), 1.dp.toPx())
                         drawLine(gridColor, Offset(0f, size.height*.88f), Offset(size.width, size.height*.88f), 1.dp.toPx())
-                        val x = listOf(0f, size.width*.33f, size.width*.66f, size.width)
-                        val vals = listOf(low, open ?: value, value, high)
-                        for (i in 0 until vals.lastIndex) drawLine(lineColor, Offset(x[i], y(vals[i])), Offset(x[i+1], y(vals[i+1])), 3.dp.toPx(), cap=StrokeCap.Round)
-                        vals.forEachIndexed { i, v -> drawCircle(lineColor, 4.dp.toPx(), Offset(x[i], y(v))) }
+                        drawLine(lineColor, Offset(center, y(high)), Offset(center, y(low)), 3.dp.toPx(), cap=StrokeCap.Round)
+                        open?.let { drawLine(lineColor, Offset(center-22.dp.toPx(), y(it)), Offset(center, y(it)), 3.dp.toPx(), cap=StrokeCap.Round) }
+                        drawLine(lineColor, Offset(center, y(value)), Offset(center+22.dp.toPx(), y(value)), 3.dp.toPx(), cap=StrokeCap.Round)
                     }
                     Text("کمینه: ${Fmt.toman(low)} · بیشینه: ${Fmt.toman(high)}", fontSize = 11.sp)
                     if (change != null) Text("تغییر روزانه: $change٪", fontSize = 12.sp)
