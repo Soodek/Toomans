@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -108,7 +109,7 @@ object NewsCountries {
         "hkd" to Country("Hong Kong", listOf("هنگ کنگ", "هنگکنگ")),
         "kwd" to Country("Kuwait", listOf("کویت", "Kuwait")),
         "dkk" to Country("Denmark", listOf("دانمارک", "کپنهاگ")),
-        "bhd" to Country("Bahrain", listOf("بحرین", "منامه", "Bahrain", "Manama)),
+        "bhd" to Country("Bahrain", listOf("بحرین", "منامه", "Bahrain", "Manama")),
         "tjs" to Country("Tajikistan", listOf("تاجیکستان", "دوشنبه")),
         "tmt" to Country("Turkmenistan", listOf("ترکمنستان", "عشق آباد")),
         "kgs" to Country("Kyrgyzstan", listOf("قرقیزستان", "بیشکک")),
