@@ -43,6 +43,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.ShowChart
+import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.CurrencyExchange
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Settings
@@ -100,12 +103,15 @@ fun TomanApp(requested: String?) {
                 containerColor = MaterialTheme.colorScheme.surface,
                 tonalElevation = 0.dp,
             ) {
-                listOf("Calculator", "Currencies", "Gold", "Settings").forEachIndexed { i, label ->
+                listOf("Calculator", "Currencies", "Gold", "Chart", "News", "AI", "Settings").forEachIndexed { i, label ->
                     val isSelected = tab == i
                     val icon = when (i) {
                         0 -> Icons.Filled.Calculate
                         1 -> Icons.Filled.CurrencyExchange
                         2 -> Icons.Filled.Savings
+                        3 -> Icons.Filled.ShowChart
+                        4 -> Icons.Filled.Newspaper
+                        5 -> Icons.Filled.AutoAwesome
                         else -> Icons.Filled.Settings
                     }
                     NavigationBarItem(
@@ -130,6 +136,9 @@ fun TomanApp(requested: String?) {
                 0 -> CalculatorTab(snap, selected, slug) { slug = it }
                 1 -> CurrenciesTab(snap, selected, defaultSlug, changed)
                 2 -> GoldTab()
+                3 -> MarketChartTab(snap)
+                4 -> NewsHomeTab()
+                5 -> AiAssistantTab(snap)
                 else -> SettingsTab(snap, changed)
             }
         }
@@ -213,7 +222,6 @@ fun CalculatorTab(snap: Snapshot, selected: List<String>, slug: String, onSlug: 
                 StatusLine(snap)
             }
         }
-        NewsSection(cur, Modifier.weight(1f).fillMaxWidth())
     }
 }
 
