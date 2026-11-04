@@ -46,10 +46,6 @@ import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.CurrencyExchange
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.Calculate as CalculateOutline
-import androidx.compose.material.icons.outlined.CurrencyExchange as CurrencyExchangeOutline
-import androidx.compose.material.icons.outlined.Savings as SavingsOutline
-import androidx.compose.material.icons.outlined.Settings as SettingsOutline
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -107,10 +103,10 @@ fun TomanApp(requested: String?) {
                 listOf("Calculator", "Currencies", "Gold", "Settings").forEachIndexed { i, label ->
                     val isSelected = tab == i
                     val icon = when (i) {
-                        0 -> if (isSelected) Icons.Filled.Calculate else CalculateOutline
-                        1 -> if (isSelected) Icons.Filled.CurrencyExchange else CurrencyExchangeOutline
-                        2 -> if (isSelected) Icons.Filled.Savings else SavingsOutline
-                        else -> if (isSelected) Icons.Filled.Settings else SettingsOutline
+                        0 -> Icons.Filled.Calculate
+                        1 -> Icons.Filled.CurrencyExchange
+                        2 -> Icons.Filled.Savings
+                        else -> Icons.Filled.Settings
                     }
                     NavigationBarItem(
                         selected = isSelected,
