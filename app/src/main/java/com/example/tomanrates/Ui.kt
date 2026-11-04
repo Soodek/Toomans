@@ -100,7 +100,8 @@ fun TomanApp(requested: String?) {
             when (tab) {
                 0 -> CalculatorTab(snap, selected, slug) { slug = it }
                 1 -> CurrenciesTab(snap, selected, defaultSlug, changed)
-                2 -> GoldTab()\n                else -> SettingsTab(snap, changed)
+                2 -> GoldTab()
+                else -> SettingsTab(snap, changed)
             }
         }
     }
