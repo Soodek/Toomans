@@ -120,28 +120,15 @@ ${JSON.stringify(marketContext)}
       }
       messages.push({ role: "user", content: message });
 
-      const stream = await env.AI.run(MODEL, {
+      const result = await env.AI.run(MODEL, {
         messages,
-        max_tokens: 500,
-        temperature: 0.45,
-        stream: true
+        max_tokens: 1100,
+        temperature: 0.45
       });
+      const reply = String(result && (result.response || result.result && result.result.response) || "").trim();
+      if (!reply) return response({ error: "AI returned an empty response" }, 502);
+      return response({ reply });
 
-      if (!stream || typeof stream.getReader !== "function") {
-        return response({ error: "AI streaming is unavailable for this model" }, 502);
-      }
-
-      return new Response(stream, {
-        status: 200,
-        headers: {
-          "Content-Type": "text/event-stream; charset=utf-8",
-          "Cache-Control": "no-cache, no-transform",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type",
-          "X-Accel-Buffering": "no"
-        }
-      });
     } catch (error) {
       return response({
         error: error && error.message ? error.message : "Internal server error"
