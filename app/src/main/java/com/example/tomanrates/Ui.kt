@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -122,14 +124,13 @@ fun TomanApp(requested: String?) {
                 containerColor = MaterialTheme.colorScheme.surface,
                 tonalElevation = 0.dp,
             ) {
-                listOf("Calculator", "Chart", "Currencies", "Gold", "AI", "Settings").forEachIndexed { i, label ->
+                listOf("Calculator", "Currencies", "Gold", "AI", "Settings").forEachIndexed { i, label ->
                     val isSelected = tab == i
                     val icon = when (i) {
                         0 -> Icons.Filled.Calculate
-                        1 -> Icons.Filled.ShowChart
-                        2 -> Icons.Filled.CurrencyExchange
-                        3 -> Icons.Filled.Savings
-                        4 -> Icons.Filled.AutoAwesome
+                        1 -> Icons.Filled.CurrencyExchange
+                        2 -> Icons.Filled.Savings
+                        3 -> Icons.Filled.AutoAwesome
                         else -> Icons.Filled.Settings
                     }
                     NavigationBarItem(
@@ -152,10 +153,9 @@ fun TomanApp(requested: String?) {
         Box(Modifier.padding(pad).fillMaxSize()) {
             when (tab) {
                 0 -> CalculatorTab(snap, selected, slug) { slug = it }
-                1 -> MarketChartTab(snap)
-                2 -> CurrenciesTab(snap, selected, defaultSlug, changed)
-                3 -> GoldTab()
-                4 -> AiAssistantTab(snap)
+                1 -> CurrenciesTab(snap, selected, defaultSlug, changed)
+                2 -> GoldTab()
+                3 -> AiAssistantTab(snap)
                 6 -> NewsHomeTab()
                 else -> SettingsTab(snap, changed)
             }
@@ -201,7 +201,7 @@ fun CalculatorTab(snap: Snapshot, selected: List<String>, slug: String, onSlug: 
     val unit = rate?.let { Catalog.unitOf(it.name) } ?: 1
     val value = parseAmount(amount)
 
-    Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 92.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Calculator", fontSize = 24.sp, fontWeight = FontWeight.Medium)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(selected) { s ->
@@ -240,6 +240,7 @@ fun CalculatorTab(snap: Snapshot, selected: List<String>, slug: String, onSlug: 
                 StatusLine(snap)
             }
         }
+        MarketChartInline(snap, cur)
     }
 }
 
