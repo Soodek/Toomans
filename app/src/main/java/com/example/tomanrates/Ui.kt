@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.verticalScroll
@@ -22,6 +25,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -77,9 +81,15 @@ private val GreenC = Color(0xFF4ADE80)
 private val AmberC = Color(0xFFFBBF24)
 private val RedC = Color(0xFFF87171)
 
-private object UiPreferences {
+internal object UiPreferences {
     val dark = mutableStateOf(true)
     val language = mutableStateOf("en")
+}
+
+fun uiText(fa: String, en: String, ar: String): String = when (UiPreferences.language.value) {
+    "fa" -> fa
+    "ar" -> ar
+    else -> en
 }
 
 @Composable
@@ -109,7 +119,7 @@ fun TomanTheme(content: @Composable () -> Unit) {
         ),
         content = {
             CompositionLocalProvider(
-                LocalLayoutDirection provides if (UiPreferences.language.value == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr,
+                LocalLayoutDirection provides if (UiPreferences.language.value == "fa" || UiPreferences.language.value == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr,
             ) { content() }
         },
     )
@@ -152,7 +162,7 @@ fun TomanApp(requested: String?) {
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                Modifier.fillMaxWidth().statusBarsPadding().height(48.dp).padding(horizontal = 8.dp),
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
             ) {
                 if (tab == 6) {
@@ -226,11 +236,11 @@ fun TomanApp(requested: String?) {
 fun StatusLine(snap: Snapshot) {
     val last = if (snap.lastSuccessAt > 0) Fmt.time(snap.lastSuccessAt) else ""
     val (text, color) = when (snap.status) {
-        Status.LIVE -> "Live · updated $last" to GreenC
-        Status.DELAYED -> "Last update attempt failed (${snap.lastError}) · rates from $last" to AmberC
-        Status.UNAVAILABLE -> "Source unavailable · last rates from $last. Not live." to RedC
-        Status.NEVER -> "Source unavailable. No rates received yet." + (if (snap.lastError.isNotBlank()) " (${snap.lastError})" else "") to RedC
-        Status.NO_TOKEN -> "No API token required." to GreenC
+        Status.LIVE -> uiText("زنده · آخرین به‌روزرسانی $last", "Live · updated $last", "مباشر · آخر تحديث $last") to GreenC
+        Status.DELAYED -> uiText("آخرین تلاش ناموفق بود (${snap.lastError}) · قیمت‌ها مربوط به $last", "Last update failed (${snap.lastError}) · rates from $last", "فشلت آخر محاولة تحديث (${snap.lastError}) · الأسعار من $last") to AmberC
+        Status.UNAVAILABLE -> uiText("منبع در دسترس نیست · آخرین قیمت‌ها مربوط به $last است.", "Source unavailable · last rates from $last. Not live.", "المصدر غير متاح · آخر الأسعار من $last وليست مباشرة.") to RedC
+        Status.NEVER -> uiText("هنوز قیمتی دریافت نشده است.", "Source unavailable. No rates received yet.", "المصدر غير متاح. لم يتم استلام أسعار بعد.") + (if (snap.lastError.isNotBlank()) " (${snap.lastError})" else "") to RedC
+        Status.NO_TOKEN -> uiText("نیازی به توکن API نیست.", "No API token required.", "لا حاجة إلى رمز API.") to GreenC
     }
     Text(text, color = color, fontSize = 13.sp)
 }
@@ -263,23 +273,44 @@ fun CalculatorTab(snap: Snapshot, selected: List<String>, slug: String, onSlug: 
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var updating by remember { mutableStateOf(false) }
+    var refreshMessage by remember { mutableStateOf<String?>(null) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 92.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-            Text(when { isFa -> "ماشین‌حساب"; isAr -> "الحاسبة"; else -> "Calculator" }, fontSize = 24.sp, fontWeight = FontWeight.Medium)
+            Text(uiText("ماشین‌حساب", "Calculator", "الحاسبة"), fontSize = 24.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.weight(1f))
             IconButton(enabled = !updating, onClick = {
                 scope.launch {
                     updating = true
-                    withContext(Dispatchers.IO) {
-                        RateRepository.refresh(ctx)
-                        runCatching { GoldRepository.refreshIfDue(ctx) }
+                    refreshMessage = null
+                    try {
+                        val result = withContext(Dispatchers.IO) {
+                            val rates = RateRepository.refresh(ctx)
+                            val goldOk = runCatching { GoldRepository.refreshIfDue(ctx) }.isSuccess
+                            rates to goldOk
+                        }
+                        refreshMessage = when (val outcome = result.first) {
+                            is RateRepository.Outcome.Updated -> uiText("قیمت‌ها با موفقیت به‌روزرسانی شدند.", "Prices updated successfully.", "تم تحديث الأسعار بنجاح.")
+                            is RateRepository.Outcome.Failed -> uiText("به‌روزرسانی ناموفق بود: ${outcome.reason}", "Update failed: ${outcome.reason}", "فشل التحديث: ${outcome.reason}")
+                            is RateRepository.Outcome.TooSoon -> uiText("قیمت‌ها اخیراً بررسی شده‌اند. زمان مجاز بعدی: ${Fmt.time(outcome.nextAllowedAt)}", "Prices were checked recently. Next allowed update: ${Fmt.time(outcome.nextAllowedAt)}", "تم التحقق من الأسعار مؤخراً. التحديث التالي: ${Fmt.time(outcome.nextAllowedAt)}")
+                            is RateRepository.Outcome.NoToken -> uiText("نیازی به توکن نیست.", "No API token is required.", "لا حاجة إلى رمز API.")
+                        }
+                        if (!result.second && result.first is RateRepository.Outcome.Updated) {
+                            refreshMessage = uiText("قیمت ارز به‌روز شد؛ دریافت قیمت طلا انجام نشد.", "Currency prices updated; gold refresh was unavailable.", "تم تحديث أسعار العملات؛ تعذر تحديث الذهب.")
+                        }
+                        onPriceRefresh()
+                    } catch (_: Exception) {
+                        refreshMessage = uiText("خطا در به‌روزرسانی. اتصال اینترنت را بررسی کنید.", "Refresh failed. Check your internet connection.", "فشل التحديث. تحقق من اتصال الإنترنت.")
+                    } finally {
+                        updating = false
                     }
-                    updating = false
-                    onPriceRefresh()
                 }
             }) {
-                Icon(Icons.Filled.Refresh, contentDescription = if (isFa) "به‌روزرسانی قیمت‌ها" else "Refresh prices")
+                if (updating) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                else Icon(Icons.Filled.Refresh, contentDescription = uiText("به‌روزرسانی قیمت‌ها", "Refresh prices", "تحديث الأسعار"))
             }
+        }
+        if (refreshMessage != null) {
+            Text(refreshMessage!!, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
         }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(selected) { s ->
@@ -293,7 +324,7 @@ fun CalculatorTab(snap: Snapshot, selected: List<String>, slug: String, onSlug: 
         OutlinedTextField(
             value = amount,
             onValueChange = { amount = it },
-            label = { Text("Amount in ${Catalog.unitLabel(cur, 1)}") },
+            label = { Text(uiText("مقدار به ${Catalog.unitLabel(cur, 1)}", "Amount in ${Catalog.unitLabel(cur, 1)}", "المبلغ بـ ${Catalog.unitLabel(cur, 1)}")) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -304,13 +335,13 @@ fun CalculatorTab(snap: Snapshot, selected: List<String>, slug: String, onSlug: 
         ) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 when {
-                    rate == null -> Text("No rate for ${Catalog.code(cur)} in the last API response.")
-                    value == null -> Text("Enter an amount.")
+                    rate == null -> Text(uiText("برای ${Catalog.code(cur)} قیمتی در آخرین پاسخ دریافت نشده است.", "No rate for ${Catalog.code(cur)} in the latest response.", "لا يوجد سعر لـ ${Catalog.code(cur)} في آخر استجابة."))
+                    value == null -> Text(uiText("مقداری وارد کنید.", "Enter an amount.", "أدخل مبلغاً."))
                     else -> {
                         val toman = value.multiply(rate.sell).divide(BigDecimal(unit))
-                        Text("${Fmt.toman(toman)} Toman", fontSize = 30.sp, fontWeight = FontWeight.Light)
+                        Text("${Fmt.toman(toman)} ${uiText("تومان", "Toman", "تومان")}", fontSize = 30.sp, fontWeight = FontWeight.Light)
                         Text(
-                            "${Catalog.unitLabel(cur, unit)} = ${Fmt.toman(rate.sell)} Toman (selling price)",
+                            "${Catalog.unitLabel(cur, unit)} = ${Fmt.toman(rate.sell)} ${uiText("تومان (قیمت فروش)", "Toman (selling price)", "تومان (سعر البيع)")}",
                             color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp,
                         )
                     }
