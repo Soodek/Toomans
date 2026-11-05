@@ -82,6 +82,25 @@ object Store {
         saveSelected(ctx, l)
     }
 
+    // ---- independent home-screen widget selection
+    fun widgetSelected(ctx: Context): List<String> {
+        val saved = p(ctx).getString("widget_selected", null)?.split(",")?.filter { it.isNotBlank() }
+        return saved?.distinct()?.take(5) ?: listOf("omr")
+    }
+    fun setWidgetSelected(ctx: Context, list: List<String>) {
+        val next = list.distinct().take(5)
+        p(ctx).edit().putString("widget_selected", next.joinToString(",")).apply()
+        if (next.isNotEmpty() && widgetDefaultSlug(ctx) !in next) setWidgetDefaultSlug(ctx, next.first())
+    }
+    fun widgetDefaultSlug(ctx: Context): String {
+        val list = widgetSelected(ctx)
+        val saved = p(ctx).getString("widget_default", null)
+        return if (saved != null && saved in list) saved else list.firstOrNull() ?: "omr"
+    }
+    fun setWidgetDefaultSlug(ctx: Context, slug: String) {
+        if (slug in widgetSelected(ctx)) p(ctx).edit().putString("widget_default", slug).apply()
+    }
+
     // ---- cache of the last successful response + attempt bookkeeping ----
     fun cachedRaw(ctx: Context): String = p(ctx).getString("raw", "") ?: ""
     fun lastSuccessAt(ctx: Context): Long = p(ctx).getLong("last_success", 0L)
