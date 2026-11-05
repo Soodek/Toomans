@@ -57,8 +57,8 @@ object WidgetRenderer {
 
     private fun build(ctx: Context, options: Bundle?): RemoteViews {
         val snap = RateRepository.snapshot(ctx)
-        val selected = Store.selected(ctx)
-        val heroSlug = Store.defaultSlug(ctx)
+        val selected = Store.widgetSelected(ctx)
+        val heroSlug = Store.widgetDefaultSlug(ctx)
         val others = selected.filter { it != heroSlug }
         val minH = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0) ?: 0
         val maxRows = if (minH <= 0) 2 else ((minH - 115) / 28).coerceIn(0, 4)
