@@ -1,41 +1,135 @@
-# Toman Rates (Android widget)
+# Toomans — Android Currency & Market App
 
-Home-screen widget + app showing Iranian free-market **selling** prices (Tomans) for any currency
-Alanchand returns. Kotlin, RemoteViews widget, Compose app, WorkManager. No third-party HTTP/JSON libraries.
+Toomans is an Android app and home-screen widget for tracking Iranian free-market currency prices, gold and coin quotes, market movements, and related news. It has grown from a lightweight currency-rate widget into a multi-section market companion.
 
-## Build the APK
-1. Install Android Studio (current stable). Open this folder (`TomanRates`). Let Gradle sync
-   (it downloads Gradle 8.9, AGP 8.7.3, Kotlin 2.0.21; accept SDK 35 when prompted).
-2. Build > Build Bundle(s) / APK(s) > Build APK(s). Output: `app/build/outputs/apk/debug/app-debug.apk`.
-   Command line (after Android Studio created the wrapper, or with a local Gradle 8.9): `gradle assembleDebug`.
-3. Copy the APK to the phone and install it (allow "install unknown apps"), or run it from Android Studio over USB.
-4. Open the app > Settings > paste your Alanchand token > "Save token and update".
-5. Long-press the home screen > Widgets > Toman Rates. Resize to show more currencies.
+> **Development status:** The feature branch contains the additions described below. Build and device verification are tracked separately; a successful CI build does not replace testing on a physical Android device.
 
-## Iran gold market
-- The Gold tab fetches Iran-market data from `iran-market/iran-market.github.io` (the API states its source as TGJU / Nobitex).
-- Shows 18K gold per gram and Emami coin prices, market change percentage, daily high/low, source timestamp, and stale-data warnings.
-- 24K is displayed as a mathematical equivalent derived from the 18K quote (18K × 24 / 18), not as a separate live market quote.
-- The built-in gram/karat calculator estimates metal value only; it excludes making charges, tax, seller margin, and coin premium. Last successful JSON response is cached locally for offline viewing.
+## What changed since the first version
 
-## How it works
- require API token one call returns every currency
-  (observed: 44 entries) as `{slug: {sell, buy, dolar_rate, open, high, low, dayChange, updated_at, name}}`.
-- Only `sell` is used (Tomans). Five currencies (JPY, IQD, AMD, KRW, SYP) are quoted per 100 units; the API has
-  no unit field, so the app detects the Persian "صد" prefix in `name`.
-- Rate limit: 1 request/hour. All network access goes through `RateRepository.refresh()`, which refuses to call
-  more than once per 60 min (also for the Update button). Periodic work runs every 65 min.
-- Honesty rules: LIVE (last attempt ok, < 3 h old) / DELAYED (last attempt failed, rates < 3 h old, amber) /
-  UNAVAILABLE (older than 3 h or never; the widget shows "—" and "Source unavailable · last update HH:mm").
-  The widget never draws a price older than 3 h. Widget refreshes triggered by the system re-render from cache only.
-- Adding currencies = data, not code: the list, order and default are in `Store`; the widget and calculator read
-  them. `Catalog` only adds English names/flags and falls back to the API's own name for unknown slugs.
+The first version focused on displaying currency selling prices in a home-screen widget and a basic in-app calculator. The current development version adds or expands the following:
 
-## Not verified (read this)
-- This code was written without an Android SDK and **has not been compiled or run**. Expect to fix a typo or
-  two on first sync. Send me the error text and I'll fix it.
-- Unknown: the API's error / wrong-token / rate-limit response bodies (any non-200 or unparseable reply is shown
-  as a failure), whether `updated_at` is Tehran time, and whether the limit is rolling or per clock-hour.
-- Token is kept in app-private storage (not encrypted), backups are off. Don't share the APK after saving a token.
-- Samsung may stop background work for apps it considers unused: Settings > Battery > Background usage limits >
-  make sure Toman Rates is not in "Sleeping apps".
+### 1. Currency market data
+- Reworked the market-data integration to read public market information from TGJU pages instead of relying on the original Alanchand token-based request.
+- Parses available selling and buying prices, opening price, daily high/low, daily change, source timestamp, and currency names.
+- Keeps the last successful response locally so previously fetched prices remain available when the network is unavailable.
+- Shows market-data states such as live, delayed, and unavailable instead of silently presenting old prices as current.
+- Applies a local one-minute minimum interval between currency refresh attempts.
+
+### 2. Currency calculator and list management
+- In-app currency calculator.
+- Selectable currency list: add and remove symbols, reorder currencies, and choose a default currency.
+- Currency catalog with codes, flags, and display names; unknown symbols can fall back to names supplied by the market source.
+- Calculator-linked market chart: choosing a currency (or a supported gold/coin asset) changes the chart's selected asset.
+
+### 3. Gold and coin market
+- Dedicated Gold section with Iranian 18-karat gold and Emami coin quotes when available from the source.
+- Displays available market change, daily high/low, source time, and cached data.
+- Includes a gram/karat value calculator. Its estimate is metal value only; it does not include making charges, tax, seller margin, or coin premium.
+- 24-karat value, where shown, is a mathematical equivalent derived from the 18-karat quote, not a separate live quote.
+- Gold and coin prices are also recorded locally for charting.
+
+### 4. Market chart and price history
+- A chart is embedded below the calculator rather than being a separate bottom-navigation destination.
+- The selected asset can be a currency, 18-karat gold, or Emami coin when its data is available.
+- Offers 24-hour, 7-day, and 30-day views.
+- History is collected locally after successful refreshes (up to 31 days and a bounded number of samples). It is **not** a complete historical market archive: older points from before the app began collecting data are not available.
+- Chart availability and shape depend on the number and timing of locally collected samples.
+
+### 5. News room
+- Dedicated news screen with country/region filters, including Oman, Iraq, the United States, Europe, Iran, and other mapped markets.
+- RSS sources currently include Al Jazeera, BBC Persian, DW Persian, Radio Farda, and Voice of America. Oman Observer is additionally loaded for the Oman view.
+- News items can show their source, publication time, title, and an image when the feed provides one; tapping an item opens the original article.
+- Includes an immigration/migration-focused filter and an all-mentions filter.
+- Country matching is based on country and city names found in article titles and summaries. These are general feeds, not dedicated country-specific feeds, so the filter can miss relevant stories or include an imperfect match.
+- Feed responses are cached locally; refreshes are throttled to avoid repeatedly downloading the same feeds.
+
+### 6. AI market assistant
+- Adds a Persian-language conversational market assistant.
+- The assistant can receive the app's cached currency prices, gold/coin information, market status, and recent conversation context to answer market-related questions.
+- Requests are routed through a Cloudflare Worker backend that calls the OpenAI Responses API; the OpenAI API key belongs in the Worker secret, not in the Android app.
+- The Worker includes an IP-based rate-limit binding. Cloudflare rate limiting is approximate and should not be treated as a guaranteed global spending cap.
+- AI responses are informational and should not be treated as definitive investment advice.
+
+### 7. Settings, appearance, and navigation
+- Dark and light appearance options.
+- Language selector for Persian, English, and Arabic, with right-to-left layout direction for Persian and Arabic.
+- Dedicated bottom-navigation destinations for Calculator, Currencies, Gold, AI, and Settings; News is opened from the calculator's news shortcut.
+- Automatic refresh controls for foreground and background work.
+- Refresh feedback for success, failure, and requests made before the next permitted refresh time.
+
+**Localization note:** Language selection and RTL support are implemented, but not every screen and every news/assistant string is fully translated yet. Some areas may still show mixed-language text.
+
+### 8. Home-screen widget and background updates
+- Retains the original home-screen currency widget.
+- Widget and app use the same stored currency selection and cached market data.
+- WorkManager handles scheduled background refreshes; background refresh can be disabled in Settings.
+- Android battery optimization may delay background work. On Samsung devices, check that Toomans is not placed in Sleeping apps if timely background updates are important.
+
+## Data sources and update behavior
+
+- **Currency and gold/coin data:** TGJU public market pages, parsed by the app.
+- **News:** Public RSS feeds listed above.
+- **AI:** Cloudflare Worker calling the OpenAI Responses API.
+- Currency refresh attempts have a local one-minute guard. Gold refreshes have their own five-minute guard. News feeds are cached for up to three hours, with a shorter minimum interval for forced refreshes.
+- A refresh schedule is not a promise that the source itself publishes new prices at that frequency. The app can only display the latest information available from its sources.
+
+## Build the Android APK
+
+1. Install the current stable Android Studio.
+2. Open the repository in Android Studio and allow Gradle sync to complete.
+3. Install/accept Android SDK 35 if prompted.
+4. Use **Build → Build Bundle(s) / APK(s) → Build APK(s)**.
+5. The debug APK is normally written to `app/build/outputs/apk/debug/app-debug.apk`.
+
+Command line (with the Gradle wrapper available):
+
+```sh
+./gradlew assembleDebug
+```
+
+On Windows:
+
+```bat
+gradlew.bat assembleDebug
+```
+
+## AI Worker setup (optional self-hosting)
+
+The Android app currently points to a configured Worker endpoint in `Assistant.kt`. To use your own Worker:
+
+1. Deploy the Worker from the `worker/` directory with Wrangler.
+2. Add your OpenAI API key as a Worker secret; never commit it to Git.
+3. Update the configured Worker URL in `Assistant.kt`, then build the app.
+
+Example commands:
+
+```sh
+npm install -g wrangler@latest
+wrangler login
+wrangler secret put OPENAI_API_KEY
+wrangler deploy
+```
+
+See [worker/README.md](worker/README.md) for deployment and rate-limit details.
+
+## Privacy and security notes
+
+- The OpenAI API key should remain in the Cloudflare Worker secret store and must not be embedded in the Android client.
+- App preferences and cached market data are stored in app-private local storage.
+- Do not share a build containing personal credentials or private configuration.
+- News content is fetched from third-party RSS providers and article links open on their original websites.
+
+## Known limitations
+
+- Local chart history cannot show prices from before the app started collecting samples; no full historical archive provider is integrated.
+- News country filters depend on matching names in general RSS headlines and summaries; they are not comprehensive country-news search.
+- News images appear only when a feed exposes a usable image URL.
+- Localization is not yet complete across every screen.
+- Background execution can be delayed by Android or manufacturer battery management.
+- CI build success confirms compilation and artifact creation only; real-device behavior still needs to be checked on target devices.
+
+## Project structure
+
+- `app/src/main/java/com/example/tomanrates/` — Android app, market repositories, widget, UI, chart, news, and assistant.
+- `worker/` — Cloudflare Worker backend for the AI assistant.
+- `.github/workflows/build-apk.yml` — GitHub Actions APK build workflow.
