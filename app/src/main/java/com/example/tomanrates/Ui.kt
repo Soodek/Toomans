@@ -339,7 +339,6 @@ private fun SmallBtn(label: String, enabled: Boolean = true, onClick: () -> Unit
 fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
-    var tokenInput by remember { mutableStateOf("") }
     var message by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
 
@@ -348,10 +347,10 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
             busy = true
             val out = withContext(Dispatchers.IO) { RateRepository.refresh(ctx) }
             message = when (out) {
-                is RateRepository.Outcome.Updated -> "Updated."
+                is RateRepository.Outcome.Updated -> "Market prices updated from TGJU."
                 is RateRepository.Outcome.Failed -> "Update failed: ${out.reason}"
-                is RateRepository.Outcome.TooSoon -> "Rate limit: next update allowed at ${Fmt.time(out.nextAllowedAt)}."
-                is RateRepository.Outcome.NoToken -> "Add your API token first."
+                is RateRepository.Outcome.TooSoon -> "Next refresh available at ${Fmt.time(out.nextAllowedAt)}."
+                is RateRepository.Outcome.NoToken -> "No token is required."
             }
             busy = false
             changed()
@@ -361,39 +360,22 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
     val next = RateRepository.nextAllowedAt(ctx)
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item { Text("Settings", fontSize = 24.sp, fontWeight = FontWeight.Medium) }
-        item {
-            Text(
-                if (Store.token(ctx).isBlank()) "No API token saved." else "API token saved on this device.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp,
-            )
-        }
-        item {
-            OutlinedTextField(
-                value = tokenInput, onValueChange = { tokenInput = it },
-                label = { Text("Alanchand API token") }, singleLine = true,
-                visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(),
-            )
-        }
-        item {
-            Button(
-                enabled = tokenInput.isNotBlank() && !busy,
-                onClick = { Store.setToken(ctx, tokenInput); tokenInput = ""; refresh() },
-            ) { Text("Save token and update") }
-        }
+        item { Text("Price source: TGJU public market pages · No Alanchand token or API key required.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp) }
         item { StatusLine(snap) }
         item {
             Text(
                 buildString {
                     append("Last successful update: ")
                     append(if (snap.lastSuccessAt > 0) Fmt.time(snap.lastSuccessAt) else "never")
-                    if (snap.sourceTime != null) append("\nSource timestamp (as reported): ${snap.sourceTime}")
-                    if (next > 0) append("\nNext update allowed: ${if (next <= System.currentTimeMillis()) "now" else Fmt.time(next)}")
-                    append("\nThe API allows one request per hour; the widget updates itself about every 65 minutes.")
+                    if (snap.sourceTime != null) append("\\nSource timestamp: ${snap.sourceTime}")
+                    if (next > 0) append("\\nNext refresh allowed: ${if (next <= System.currentTimeMillis()) "now" else Fmt.time(next)}")
+                    append("\\nForeground refresh target: about once per minute. Background refresh is managed by Android and may be delayed by battery restrictions.")
                 },
                 color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp,
             )
         }
-        item { Button(enabled = !busy, onClick = { refresh() }) { Text(if (busy) "Updating…" else "Update now") } }
+        item { Button(enabled = !busy, onClick = { refresh() }) { Text(if (busy) "Updating…" else "Update prices now") } }
         if (message != null) item { Text(message!!, fontSize = 13.sp) }
+        item { Text("Market values are scraped from public website pages. If the source changes its page structure or blocks requests, updates may temporarily fail.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp) }
     }
 }
