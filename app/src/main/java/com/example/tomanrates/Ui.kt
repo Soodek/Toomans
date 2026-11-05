@@ -105,7 +105,10 @@ fun TomanApp(requested: String?) {
     // While the app is open, refresh public market pages about once per minute.
     LaunchedEffect(Unit) {
         while (true) {
-            withContext(Dispatchers.IO) { RateRepository.refresh(ctx) }
+            withContext(Dispatchers.IO) {
+                RateRepository.refresh(ctx)
+                runCatching { GoldRepository.refreshIfDue(ctx) }
+            }
             tick++
             WidgetRenderer.updateAll(ctx)
             delay(60_000L)
