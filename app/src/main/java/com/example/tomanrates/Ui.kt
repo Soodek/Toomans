@@ -382,15 +382,21 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
     val scope = rememberCoroutineScope()
     var message by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
+    var autoRefresh by remember { mutableStateOf(Store.autoRefreshEnabled(ctx)) }
+    var backgroundRefresh by remember { mutableStateOf(Store.backgroundRefreshEnabled(ctx)) }
 
     fun refresh() {
         scope.launch {
             busy = true
-            val out = withContext(Dispatchers.IO) { RateRepository.refresh(ctx) }
+            val out = withContext(Dispatchers.IO) {
+                val result = RateRepository.refresh(ctx)
+                runCatching { GoldRepository.refreshIfDue(ctx) }
+                result
+            }
             message = when (out) {
                 is RateRepository.Outcome.Updated -> "Market prices updated from TGJU."
                 is RateRepository.Outcome.Failed -> "Update failed: ${out.reason}"
-                is RateRepository.Outcome.TooSoon -> "Next refresh available at ${Fmt.time(out.nextAllowedAt)}."
+                is RateRepository.Outcome.TooSoon -> "Prices were checked recently. Try again at ${Fmt.time(out.nextAllowedAt)}."
                 is RateRepository.Outcome.NoToken -> "No token is required."
             }
             busy = false
@@ -401,22 +407,54 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
     val next = RateRepository.nextAllowedAt(ctx)
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item { Text("Settings", fontSize = 24.sp, fontWeight = FontWeight.Medium) }
-        item { Text("Price source: TGJU public market pages · No Alanchand token or API key required.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp) }
-        item { StatusLine(snap) }
         item {
-            Text(
-                buildString {
-                    append("Last successful update: ")
-                    append(if (snap.lastSuccessAt > 0) Fmt.time(snap.lastSuccessAt) else "never")
-                    if (snap.sourceTime != null) append("\\nSource timestamp: ${snap.sourceTime}")
-                    if (next > 0) append("\\nNext refresh allowed: ${if (next <= System.currentTimeMillis()) "now" else Fmt.time(next)}")
-                    append("\\nForeground refresh target: about once per minute. Background refresh is managed by Android and may be delayed by battery restrictions.")
-                },
-                color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp,
-            )
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Price updates", fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Automatic updates")
+                            Text("Refresh prices about once a minute while the app is open.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                        }
+                        Switch(checked = autoRefresh, onCheckedChange = {
+                            autoRefresh = it
+                            Store.setAutoRefreshEnabled(ctx, it)
+                        })
+                    }
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Background updates")
+                            Text("Allow Android to refresh prices when the app is closed. Usually every 15 minutes; Android may delay it.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                        }
+                        Switch(checked = backgroundRefresh, onCheckedChange = {
+                            backgroundRefresh = it
+                            Store.setBackgroundRefreshEnabled(ctx, it)
+                            Scheduler.sync(ctx)
+                        })
+                    }
+                }
+            }
         }
-        item { Button(enabled = !busy, onClick = { refresh() }) { Text(if (busy) "Updating…" else "Update prices now") } }
-        if (message != null) item { Text(message!!, fontSize = 13.sp) }
-        item { Text("Market values are scraped from public website pages. If the source changes its page structure or blocks requests, updates may temporarily fail.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp) }
+        item {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Data source", fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                    Text("TGJU public market pages · No API key or Alanchand token required.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                    StatusLine(snap)
+                    Text(
+                        buildString {
+                            append("Last successful update: ")
+                            append(if (snap.lastSuccessAt > 0) Fmt.time(snap.lastSuccessAt) else "never")
+                            if (snap.sourceTime != null) append("\nSource timestamp: ${snap.sourceTime}")
+                            if (next > 0) append("\nNext refresh allowed: ${if (next <= System.currentTimeMillis()) "now" else Fmt.time(next)}")
+                        },
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp,
+                    )
+                    Button(enabled = !busy, onClick = { refresh() }) { Text(if (busy) "Updating…" else "Update prices now") }
+                    if (message != null) Text(message!!, fontSize = 13.sp)
+                    Text("Prices are read from public website pages. If TGJU changes its page structure or blocks requests, updates may temporarily fail.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                }
+            }
+        }
     }
 }
