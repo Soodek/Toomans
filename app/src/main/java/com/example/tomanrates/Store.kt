@@ -80,6 +80,12 @@ object Store {
     fun priceHistory(ctx: Context, slug: String, rangeMs: Long): List<PricePoint> =
         PriceHistory.read(ctx, slug, rangeMs)
 
+    fun recordPrice(ctx: Context, slug: String, price: BigDecimal, timestamp: Long = System.currentTimeMillis()) {
+        if (price.signum() <= 0) return
+        val quote = Rate(slug, slug, price, null, sourceUpdatedAt = null)
+        PriceHistory.append(ctx, mapOf(slug to quote), timestamp)
+    }
+
     /** attemptAt is null when the request never reached the server (does not use up the hourly budget). */
     fun saveFailure(ctx: Context, reason: String, attemptAt: Long?) {
         val e = p(ctx).edit().putBoolean("last_ok", false).putString("last_error", reason)
