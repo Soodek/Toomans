@@ -12,6 +12,7 @@ object Store {
     // ---- token ----
     fun token(ctx: Context): String = p(ctx).getString("token", "") ?: ""
     fun setToken(ctx: Context, t: String) = p(ctx).edit().putString("token", t.trim()).apply()
+    fun clearLegacyToken(ctx: Context) = p(ctx).edit().remove("token").apply()
 
     // ---- selection / order / default ----
     fun selected(ctx: Context): List<String> {
