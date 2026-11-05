@@ -161,16 +161,16 @@ fun TomanApp(requested: String?) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            Row(
-                Modifier.fillMaxWidth().statusBarsPadding().height(48.dp).padding(horizontal = 8.dp),
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-            ) {
-                if (tab == 6) {
+            if (tab == 6) {
+                Row(
+                    Modifier.fillMaxWidth().statusBarsPadding().height(48.dp).padding(horizontal = 8.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                ) {
                     IconButton(onClick = { tab = 0 }) {
-                        Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = uiText("بازگشت", "Back", "رجوع"))
                     }
+                    Spacer(Modifier.weight(1f))
                 }
-                Spacer(Modifier.weight(1f))
             }
         },
         floatingActionButton = {
@@ -274,7 +274,7 @@ fun CalculatorTab(snap: Snapshot, selected: List<String>, slug: String, onSlug: 
     val scope = rememberCoroutineScope()
     var updating by remember { mutableStateOf(false) }
     var refreshMessage by remember { mutableStateOf<String?>(null) }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 92.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 92.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
             Text(uiText("ماشین‌حساب", "Calculator", "الحاسبة"), fontSize = 24.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.weight(1f))
