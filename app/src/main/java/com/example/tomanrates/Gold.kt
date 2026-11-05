@@ -96,6 +96,9 @@ object GoldRepository {
         result.emamiCoin?.let { json.put("coin", quoteJson(it)) }
         ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putString(CACHE, json.toString()).apply()
+        val sampleTime = System.currentTimeMillis()
+        Store.recordPrice(ctx, "gold18", result.gold18.price, sampleTime)
+        result.emamiCoin?.let { Store.recordPrice(ctx, "coin", it.price, sampleTime) }
         return result
     }
 
