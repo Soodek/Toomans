@@ -17,7 +17,7 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         Store.clearLegacyToken(this)
-        Scheduler.ensure(this)
+        Scheduler.sync(this)
     }
 }
 
@@ -27,10 +27,17 @@ object Scheduler {
      * the local guard. No network constraint on purpose: when offline the worker must still run so the widget
      * can notice that its data is getting old.
      */
-    fun ensure(ctx: Context) {
-        val req = PeriodicWorkRequestBuilder<RefreshWorker>(15, TimeUnit.MINUTES).build()
-        WorkManager.getInstance(ctx).enqueueUniquePeriodicWork("rates_periodic", ExistingPeriodicWorkPolicy.KEEP, req)
+    fun sync(ctx: Context) {
+        val manager = WorkManager.getInstance(ctx)
+        if (Store.backgroundRefreshEnabled(ctx)) {
+            val req = PeriodicWorkRequestBuilder<RefreshWorker>(15, TimeUnit.MINUTES).build()
+            manager.enqueueUniquePeriodicWork("rates_periodic", ExistingPeriodicWorkPolicy.KEEP, req)
+        } else {
+            manager.cancelUniqueWork("rates_periodic")
+        }
     }
+
+    fun ensure(ctx: Context) = sync(ctx)
 
     /** One extra run (e.g. when a widget is first added). Still subject to the hourly guard. */
     fun refreshSoon(ctx: Context) {
