@@ -15,7 +15,16 @@ object Store {
     fun setToken(ctx: Context, t: String) = p(ctx).edit().putString("token", t.trim()).apply()
     fun clearLegacyToken(ctx: Context) = p(ctx).edit().remove("token").apply()
 
-    // ---- selection / order / default ----
+    // ---- update preferences
+    fun autoRefreshEnabled(ctx: Context): Boolean = p(ctx).getBoolean("auto_refresh_enabled", true)
+    fun setAutoRefreshEnabled(ctx: Context, enabled: Boolean) =
+        p(ctx).edit().putBoolean("auto_refresh_enabled", enabled).apply()
+
+    fun backgroundRefreshEnabled(ctx: Context): Boolean = p(ctx).getBoolean("background_refresh_enabled", true)
+    fun setBackgroundRefreshEnabled(ctx: Context, enabled: Boolean) =
+        p(ctx).edit().putBoolean("background_refresh_enabled", enabled).apply()
+
+    // ---- selection / order / default
     fun selected(ctx: Context): List<String> {
         val s = p(ctx).getString("selected", null)?.split(",")?.filter { it.isNotBlank() }
         return if (s.isNullOrEmpty()) DEFAULT_SELECTION else s
