@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 
@@ -100,6 +101,16 @@ fun TomanApp(requested: String?) {
     val selected = remember(tick) { Store.selected(ctx) }
     val defaultSlug = remember(tick) { Store.defaultSlug(ctx) }
     val changed: () -> Unit = { tick++; WidgetRenderer.updateAll(ctx) }
+
+    // While the app is open, refresh public market pages about once per minute.
+    LaunchedEffect(Unit) {
+        while (true) {
+            withContext(Dispatchers.IO) { RateRepository.refresh(ctx) }
+            tick++
+            WidgetRenderer.updateAll(ctx)
+            delay(60_000L)
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -173,7 +184,7 @@ fun StatusLine(snap: Snapshot) {
         Status.DELAYED -> "Last update attempt failed (${snap.lastError}) · rates from $last" to AmberC
         Status.UNAVAILABLE -> "Source unavailable · last rates from $last. Not live." to RedC
         Status.NEVER -> "Source unavailable. No rates received yet." + (if (snap.lastError.isNotBlank()) " (${snap.lastError})" else "") to RedC
-        Status.NO_TOKEN -> "Add your API token in Settings." to AmberC
+        Status.NO_TOKEN -> "No API token required." to GreenC
     }
     Text(text, color = color, fontSize = 13.sp)
 }
