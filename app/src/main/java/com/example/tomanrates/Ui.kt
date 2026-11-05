@@ -34,6 +34,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,6 +55,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CurrencyExchange
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -92,6 +94,22 @@ fun TomanApp(requested: String?) {
     var tick by remember { mutableIntStateOf(0) }
     var tab by remember { mutableIntStateOf(0) }
     var slug by remember { mutableStateOf(Store.defaultSlug(ctx)) }
+    var refreshing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    fun refreshPrices() {
+        if (refreshing) return
+        scope.launch {
+            refreshing = true
+            withContext(Dispatchers.IO) {
+                RateRepository.refresh(ctx)
+                runCatching { GoldRepository.refreshIfDue(ctx) }
+            }
+            refreshing = false
+            tick++
+            WidgetRenderer.updateAll(ctx)
+        }
+    }
 
     LaunchedEffect(requested) {
         if (requested != null) { slug = requested; tab = 0 }
@@ -105,12 +123,14 @@ fun TomanApp(requested: String?) {
     // While the app is open, refresh public market pages about once per minute.
     LaunchedEffect(Unit) {
         while (true) {
-            withContext(Dispatchers.IO) {
-                RateRepository.refresh(ctx)
-                runCatching { GoldRepository.refreshIfDue(ctx) }
+            if (Store.autoRefreshEnabled(ctx)) {
+                withContext(Dispatchers.IO) {
+                    RateRepository.refresh(ctx)
+                    runCatching { GoldRepository.refreshIfDue(ctx) }
+                }
+                tick++
+                WidgetRenderer.updateAll(ctx)
             }
-            tick++
-            WidgetRenderer.updateAll(ctx)
             delay(60_000L)
         }
     }
@@ -118,11 +138,18 @@ fun TomanApp(requested: String?) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            if (tab == 6) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.End, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            ) {
+                if (tab == 6) {
                     IconButton(onClick = { tab = 0 }) {
                         Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Back")
                     }
+                }
+                Spacer(Modifier.weight(1f))
+                IconButton(onClick = { refreshPrices() }, enabled = !refreshing) {
+                    Icon(imageVector = Icons.Filled.Refresh, contentDescription = "Refresh prices")
                 }
             }
         },
