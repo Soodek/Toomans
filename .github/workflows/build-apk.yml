@@ -3,8 +3,14 @@ name: Build Android APK
 
 on:
   push:
+    branches: [main, feature/ai-market-chart-news-nav]
+  pull_request:
     branches: [main]
   workflow_dispatch:
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read

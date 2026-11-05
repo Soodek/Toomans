@@ -10,8 +10,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -20,8 +25,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -30,12 +38,18 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -43,9 +57,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.ShowChart
+import androidx.compose.material.icons.filled.Newspaper
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CurrencyExchange
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -54,6 +73,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 
@@ -61,10 +81,26 @@ private val GreenC = Color(0xFF4ADE80)
 private val AmberC = Color(0xFFFBBF24)
 private val RedC = Color(0xFFF87171)
 
+internal object UiPreferences {
+    val dark = mutableStateOf(true)
+    val language = mutableStateOf("en")
+}
+
+fun uiText(fa: String, en: String, ar: String): String = when (UiPreferences.language.value) {
+    "fa" -> fa
+    "ar" -> ar
+    else -> en
+}
+
 @Composable
 fun TomanTheme(content: @Composable () -> Unit) {
+    val ctx = LocalContext.current
+    LaunchedEffect(Unit) {
+        UiPreferences.dark.value = Store.darkThemeEnabled(ctx)
+        UiPreferences.language.value = Store.appLanguage(ctx)
+    }
     MaterialTheme(
-        colorScheme = darkColorScheme(
+        colorScheme = if (UiPreferences.dark.value) darkColorScheme(
             primary = Color(0xFF7DB7FF),
             background = Color(0xFF111318),
             surface = Color(0xFF17191F),
@@ -72,8 +108,20 @@ fun TomanTheme(content: @Composable () -> Unit) {
             onBackground = Color(0xFFECEEF3),
             onSurface = Color(0xFFECEEF3),
             onSurfaceVariant = Color(0xFFA9AEBB),
+        ) else lightColorScheme(
+            primary = Color(0xFF1769AA),
+            background = Color(0xFFF5F6F8),
+            surface = Color(0xFFFFFFFF),
+            surfaceVariant = Color(0xFFE8EBF0),
+            onBackground = Color(0xFF17191F),
+            onSurface = Color(0xFF17191F),
+            onSurfaceVariant = Color(0xFF5E6570),
         ),
-        content = content,
+        content = {
+            CompositionLocalProvider(
+                LocalLayoutDirection provides if (UiPreferences.language.value == "fa" || UiPreferences.language.value == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr,
+            ) { content() }
+        },
     )
 }
 
@@ -83,6 +131,8 @@ fun TomanApp(requested: String?) {
     var tick by remember { mutableIntStateOf(0) }
     var tab by remember { mutableIntStateOf(0) }
     var slug by remember { mutableStateOf(Store.defaultSlug(ctx)) }
+    var refreshing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(requested) {
         if (requested != null) { slug = requested; tab = 0 }
@@ -93,19 +143,61 @@ fun TomanApp(requested: String?) {
     val defaultSlug = remember(tick) { Store.defaultSlug(ctx) }
     val changed: () -> Unit = { tick++; WidgetRenderer.updateAll(ctx) }
 
+    // While the app is open, refresh public market pages about once per minute.
+    LaunchedEffect(Unit) {
+        while (true) {
+            if (Store.autoRefreshEnabled(ctx)) {
+                withContext(Dispatchers.IO) {
+                    RateRepository.refresh(ctx)
+                    runCatching { GoldRepository.refreshIfDue(ctx) }
+                }
+                tick++
+                WidgetRenderer.updateAll(ctx)
+            }
+            delay(60_000L)
+        }
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            if (tab == 6) {
+                Row(
+                    Modifier.fillMaxWidth().statusBarsPadding().height(48.dp).padding(horizontal = 8.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                ) {
+                    IconButton(onClick = { tab = 0 }) {
+                        Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = uiText("بازگشت", "Back", "رجوع"))
+                    }
+                    Spacer(Modifier.weight(1f))
+                }
+            }
+        },
+        floatingActionButton = {
+            if (tab == 0) {
+                FloatingActionButton(onClick = { tab = 6 }) {
+                    Icon(imageVector = Icons.Filled.Newspaper, contentDescription = "News")
+                }
+            }
+        },
         bottomBar = {
             NavigationBar(
                 containerColor = MaterialTheme.colorScheme.surface,
                 tonalElevation = 0.dp,
             ) {
-                listOf("Calculator", "Currencies", "Gold", "Settings").forEachIndexed { i, label ->
+                listOf(
+                    when (UiPreferences.language.value) { "fa" -> "ماشین‌حساب"; "ar" -> "الحاسبة"; else -> "Calculator" },
+                    when (UiPreferences.language.value) { "fa" -> "ارزها"; "ar" -> "العملات"; else -> "Currencies" },
+                    when (UiPreferences.language.value) { "fa" -> "طلا"; "ar" -> "الذهب"; else -> "Gold" },
+                    when (UiPreferences.language.value) { "fa" -> "هوش مصنوعی"; "ar" -> "الذكاء الاصطناعي"; else -> "AI" },
+                    when (UiPreferences.language.value) { "fa" -> "تنظیمات"; "ar" -> "الإعدادات"; else -> "Settings" },
+                ).forEachIndexed { i, label ->
                     val isSelected = tab == i
                     val icon = when (i) {
                         0 -> Icons.Filled.Calculate
                         1 -> Icons.Filled.CurrencyExchange
                         2 -> Icons.Filled.Savings
+                        3 -> Icons.Filled.AutoAwesome
                         else -> Icons.Filled.Settings
                     }
                     NavigationBarItem(
@@ -127,9 +219,11 @@ fun TomanApp(requested: String?) {
     ) { pad ->
         Box(Modifier.padding(pad).fillMaxSize()) {
             when (tab) {
-                0 -> CalculatorTab(snap, selected, slug) { slug = it }
+                0 -> CalculatorTab(snap, selected, slug, { slug = it }, changed)
                 1 -> CurrenciesTab(snap, selected, defaultSlug, changed)
                 2 -> GoldTab()
+                3 -> AiAssistantTab(snap)
+                6 -> NewsHomeTab()
                 else -> SettingsTab(snap, changed)
             }
         }
@@ -142,11 +236,11 @@ fun TomanApp(requested: String?) {
 fun StatusLine(snap: Snapshot) {
     val last = if (snap.lastSuccessAt > 0) Fmt.time(snap.lastSuccessAt) else ""
     val (text, color) = when (snap.status) {
-        Status.LIVE -> "Live · updated $last" to GreenC
-        Status.DELAYED -> "Last update attempt failed (${snap.lastError}) · rates from $last" to AmberC
-        Status.UNAVAILABLE -> "Source unavailable · last rates from $last. Not live." to RedC
-        Status.NEVER -> "Source unavailable. No rates received yet." + (if (snap.lastError.isNotBlank()) " (${snap.lastError})" else "") to RedC
-        Status.NO_TOKEN -> "Add your API token in Settings." to AmberC
+        Status.LIVE -> uiText("زنده · آخرین به‌روزرسانی $last", "Live · updated $last", "مباشر · آخر تحديث $last") to GreenC
+        Status.DELAYED -> uiText("آخرین تلاش ناموفق بود (${snap.lastError}) · قیمت‌ها مربوط به $last", "Last update failed (${snap.lastError}) · rates from $last", "فشلت آخر محاولة تحديث (${snap.lastError}) · الأسعار من $last") to AmberC
+        Status.UNAVAILABLE -> uiText("منبع در دسترس نیست · آخرین قیمت‌ها مربوط به $last است.", "Source unavailable · last rates from $last. Not live.", "المصدر غير متاح · آخر الأسعار من $last وليست مباشرة.") to RedC
+        Status.NEVER -> uiText("هنوز قیمتی دریافت نشده است.", "Source unavailable. No rates received yet.", "المصدر غير متاح. لم يتم استلام أسعار بعد.") + (if (snap.lastError.isNotBlank()) " (${snap.lastError})" else "") to RedC
+        Status.NO_TOKEN -> uiText("نیازی به توکن API نیست.", "No API token required.", "لا حاجة إلى رمز API.") to GreenC
     }
     Text(text, color = color, fontSize = 13.sp)
 }
@@ -167,15 +261,57 @@ fun parseAmount(s: String): BigDecimal? {
 }
 
 @Composable
-fun CalculatorTab(snap: Snapshot, selected: List<String>, slug: String, onSlug: (String) -> Unit) {
+fun CalculatorTab(snap: Snapshot, selected: List<String>, slug: String, onSlug: (String) -> Unit, onPriceRefresh: () -> Unit) {
     var amount by remember { mutableStateOf("1") }
     val cur = if (slug in selected) slug else selected.first()
     val rate = snap.rates[cur]
     val unit = rate?.let { Catalog.unitOf(it.name) } ?: 1
     val value = parseAmount(amount)
 
-    Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text("Calculator", fontSize = 24.sp, fontWeight = FontWeight.Medium)
+    val isFa = UiPreferences.language.value == "fa"
+    val isAr = UiPreferences.language.value == "ar"
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var updating by remember { mutableStateOf(false) }
+    var refreshMessage by remember { mutableStateOf<String?>(null) }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 92.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Text(uiText("ماشین‌حساب", "Calculator", "الحاسبة"), fontSize = 24.sp, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.weight(1f))
+            IconButton(enabled = !updating, onClick = {
+                scope.launch {
+                    updating = true
+                    refreshMessage = null
+                    try {
+                        val result = withContext(Dispatchers.IO) {
+                            val rates = RateRepository.refresh(ctx)
+                            val goldOk = runCatching { GoldRepository.refreshIfDue(ctx) }.isSuccess
+                            rates to goldOk
+                        }
+                        refreshMessage = when (val outcome = result.first) {
+                            is RateRepository.Outcome.Updated -> uiText("قیمت‌ها با موفقیت به‌روزرسانی شدند.", "Prices updated successfully.", "تم تحديث الأسعار بنجاح.")
+                            is RateRepository.Outcome.Failed -> uiText("به‌روزرسانی ناموفق بود: ${outcome.reason}", "Update failed: ${outcome.reason}", "فشل التحديث: ${outcome.reason}")
+                            is RateRepository.Outcome.TooSoon -> uiText("قیمت‌ها اخیراً بررسی شده‌اند. زمان مجاز بعدی: ${Fmt.time(outcome.nextAllowedAt)}", "Prices were checked recently. Next allowed update: ${Fmt.time(outcome.nextAllowedAt)}", "تم التحقق من الأسعار مؤخراً. التحديث التالي: ${Fmt.time(outcome.nextAllowedAt)}")
+                            is RateRepository.Outcome.NoToken -> uiText("نیازی به توکن نیست.", "No API token is required.", "لا حاجة إلى رمز API.")
+                        }
+                        if (!result.second && result.first is RateRepository.Outcome.Updated) {
+                            refreshMessage = uiText("قیمت ارز به‌روز شد؛ دریافت قیمت طلا انجام نشد.", "Currency prices updated; gold refresh was unavailable.", "تم تحديث أسعار العملات؛ تعذر تحديث الذهب.")
+                        }
+                        onPriceRefresh()
+                    } catch (_: Exception) {
+                        refreshMessage = uiText("خطا در به‌روزرسانی. اتصال اینترنت را بررسی کنید.", "Refresh failed. Check your internet connection.", "فشل التحديث. تحقق من اتصال الإنترنت.")
+                    } finally {
+                        updating = false
+                    }
+                }
+            }) {
+                if (updating) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                else Icon(Icons.Filled.Refresh, contentDescription = uiText("به‌روزرسانی قیمت‌ها", "Refresh prices", "تحديث الأسعار"))
+            }
+        }
+        if (refreshMessage != null) {
+            Text(refreshMessage!!, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+        }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(selected) { s ->
                 FilterChip(
@@ -188,7 +324,7 @@ fun CalculatorTab(snap: Snapshot, selected: List<String>, slug: String, onSlug: 
         OutlinedTextField(
             value = amount,
             onValueChange = { amount = it },
-            label = { Text("Amount in ${Catalog.unitLabel(cur, 1)}") },
+            label = { Text(uiText("مقدار به ${Catalog.unitLabel(cur, 1)}", "Amount in ${Catalog.unitLabel(cur, 1)}", "المبلغ بـ ${Catalog.unitLabel(cur, 1)}")) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -199,13 +335,13 @@ fun CalculatorTab(snap: Snapshot, selected: List<String>, slug: String, onSlug: 
         ) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 when {
-                    rate == null -> Text("No rate for ${Catalog.code(cur)} in the last API response.")
-                    value == null -> Text("Enter an amount.")
+                    rate == null -> Text(uiText("برای ${Catalog.code(cur)} قیمتی در آخرین پاسخ دریافت نشده است.", "No rate for ${Catalog.code(cur)} in the latest response.", "لا يوجد سعر لـ ${Catalog.code(cur)} في آخر استجابة."))
+                    value == null -> Text(uiText("مقداری وارد کنید.", "Enter an amount.", "أدخل مبلغاً."))
                     else -> {
                         val toman = value.multiply(rate.sell).divide(BigDecimal(unit))
-                        Text("${Fmt.toman(toman)} Toman", fontSize = 30.sp, fontWeight = FontWeight.Light)
+                        Text("${Fmt.toman(toman)} ${uiText("تومان", "Toman", "تومان")}", fontSize = 30.sp, fontWeight = FontWeight.Light)
                         Text(
-                            "${Catalog.unitLabel(cur, unit)} = ${Fmt.toman(rate.sell)} Toman (selling price)",
+                            "${Catalog.unitLabel(cur, unit)} = ${Fmt.toman(rate.sell)} ${uiText("تومان (قیمت فروش)", "Toman (selling price)", "تومان (سعر البيع)")}",
                             color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp,
                         )
                     }
@@ -213,7 +349,7 @@ fun CalculatorTab(snap: Snapshot, selected: List<String>, slug: String, onSlug: 
                 StatusLine(snap)
             }
         }
-        NewsSection(cur, Modifier.weight(1f).fillMaxWidth())
+        MarketChartInline(snap, cur)
     }
 }
 
@@ -231,10 +367,10 @@ fun CurrenciesTab(snap: Snapshot, selected: List<String>, defaultSlug: String, c
         contentPadding = PaddingValues(20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        item { Text("Your currencies", fontSize = 24.sp, fontWeight = FontWeight.Medium) }
+        item { Text(uiText("ارزهای شما", "Your currencies", "عملاتك"), fontSize = 24.sp, fontWeight = FontWeight.Medium) }
         item {
             Text(
-                "The default (★) is the large rate in the widget. The others follow in this order, as many as fit.",
+                uiText("ارز پیش‌فرض (★) نرخ اصلی ویجت است. بقیه به همین ترتیب نمایش داده می‌شوند.", "The default (★) is the large rate in the widget. The others follow in this order, as many as fit.", "العملة الافتراضية (★) هي السعر الرئيسي في الأداة. تظهر العملات الأخرى بهذا الترتيب."),
                 color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp,
             )
         }
@@ -264,25 +400,25 @@ fun CurrenciesTab(snap: Snapshot, selected: List<String>, defaultSlug: String, c
                 }
             }
         }
-        item { Text("Add by API symbol", fontSize = 18.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 12.dp)) }
+        item { Text(uiText("افزودن با نماد API", "Add by API symbol", "إضافة باستخدام رمز API"), fontSize = 18.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 12.dp)) }
         item {
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = symbol, onValueChange = { symbol = it; error = null },
-                    label = { Text("e.g. omr, chf, usd-hav") }, singleLine = true, modifier = Modifier.weight(1f),
+                    label = { Text(uiText("مثلاً omr، chf، usd-hav", "e.g. omr, chf, usd-hav", "مثلاً omr، chf، usd-hav")) }, singleLine = true, modifier = Modifier.weight(1f),
                 )
                 Button(onClick = {
                     error = Store.addSymbol(ctx, symbol)
                     if (error == null) symbol = ""
                     changed()
-                }) { Text("Add") }
+                }) { Text(uiText("افزودن", "Add", "إضافة")) }
             }
         }
         if (error != null) item { Text(error!!, color = RedC, fontSize = 13.sp) }
         item {
             Text(
-                if (snap.rates.isEmpty()) "Available currencies appear here after the first successful update."
-                else "Available in the latest response (tap to add):",
+                if (snap.rates.isEmpty()) uiText("ارزهای موجود پس از اولین به‌روزرسانی موفق نمایش داده می‌شوند.", "Available currencies appear here after the first successful update.", "ستظهر العملات المتاحة هنا بعد أول تحديث ناجح.")
+                else uiText("ارزهای موجود در آخرین پاسخ (برای افزودن انتخاب کنید):", "Available in the latest response (tap to add):", "العملات المتاحة في آخر استجابة (اضغط للإضافة):"),
                 color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp,
             )
         }
@@ -312,19 +448,24 @@ private fun SmallBtn(label: String, enabled: Boolean = true, onClick: () -> Unit
 fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
-    var tokenInput by remember { mutableStateOf("") }
     var message by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
+    var autoRefresh by remember { mutableStateOf(Store.autoRefreshEnabled(ctx)) }
+    var backgroundRefresh by remember { mutableStateOf(Store.backgroundRefreshEnabled(ctx)) }
 
     fun refresh() {
         scope.launch {
             busy = true
-            val out = withContext(Dispatchers.IO) { RateRepository.refresh(ctx) }
+            val out = withContext(Dispatchers.IO) {
+                val result = RateRepository.refresh(ctx)
+                runCatching { GoldRepository.refreshIfDue(ctx) }
+                result
+            }
             message = when (out) {
-                is RateRepository.Outcome.Updated -> "Updated."
+                is RateRepository.Outcome.Updated -> "Market prices updated from TGJU."
                 is RateRepository.Outcome.Failed -> "Update failed: ${out.reason}"
-                is RateRepository.Outcome.TooSoon -> "Rate limit: next update allowed at ${Fmt.time(out.nextAllowedAt)}."
-                is RateRepository.Outcome.NoToken -> "Add your API token first."
+                is RateRepository.Outcome.TooSoon -> "Prices were checked recently. Try again at ${Fmt.time(out.nextAllowedAt)}."
+                is RateRepository.Outcome.NoToken -> "No token is required."
             }
             busy = false
             changed()
@@ -333,40 +474,116 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
 
     val next = RateRepository.nextAllowedAt(ctx)
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        item { Text("Settings", fontSize = 24.sp, fontWeight = FontWeight.Medium) }
+        item { Text(uiText("تنظیمات", "Settings", "الإعدادات"), fontSize = 24.sp, fontWeight = FontWeight.Medium) }
         item {
-            Text(
-                if (Store.token(ctx).isBlank()) "No API token saved." else "API token saved on this device.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp,
-            )
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(uiText("ظاهر برنامه", "Appearance", "مظهر التطبيق"), fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                    Text(uiText("حالت پوسته", "Theme", "المظهر"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = UiPreferences.dark.value,
+                            onClick = {
+                                UiPreferences.dark.value = true
+                                Store.setDarkThemeEnabled(ctx, true)
+                            },
+                            label = { Text(uiText("تیره", "Dark", "داكن")) },
+                        )
+                        FilterChip(
+                            selected = !UiPreferences.dark.value,
+                            onClick = {
+                                UiPreferences.dark.value = false
+                                Store.setDarkThemeEnabled(ctx, false)
+                            },
+                            label = { Text(uiText("روشن", "Light", "فاتح")) },
+                        )
+                    }
+                    Text(uiText("زبان برنامه", "App language", "لغة التطبيق"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = UiPreferences.language.value == "en",
+                            onClick = {
+                                UiPreferences.language.value = "en"
+                                Store.setAppLanguage(ctx, "en")
+                            },
+                            label = { Text("English") },
+                        )
+                        FilterChip(
+                            selected = UiPreferences.language.value == "fa",
+                            onClick = {
+                                UiPreferences.language.value = "fa"
+                                Store.setAppLanguage(ctx, "fa")
+                            },
+                            label = { Text("فارسی") },
+                        )
+                        FilterChip(
+                            selected = UiPreferences.language.value == "ar",
+                            onClick = {
+                                UiPreferences.language.value = "ar"
+                                Store.setAppLanguage(ctx, "ar")
+                            },
+                            label = { Text("العربية") },
+                        )
+                    }
+                    Text(
+                        uiText(
+                            "تغییر زبان و پوسته فوراً اعمال می‌شود.",
+                            "Language and theme changes apply immediately.",
+                            "يتم تطبيق تغييرات اللغة والمظهر فوراً."
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp,
+                    )
+                }
+            }
         }
         item {
-            OutlinedTextField(
-                value = tokenInput, onValueChange = { tokenInput = it },
-                label = { Text("Alanchand API token") }, singleLine = true,
-                visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(),
-            )
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(uiText("به‌روزرسانی قیمت‌ها", "Price updates", "تحديث الأسعار"), fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(uiText("به‌روزرسانی خودکار", "Automatic updates", "التحديثات التلقائية"))
+                            Text(uiText("هنگام باز بودن برنامه، قیمت‌ها تقریباً هر یک دقیقه بررسی می‌شوند.", "Refresh prices about once a minute while the app is open.", "يتم تحديث الأسعار تقريباً كل دقيقة أثناء فتح التطبيق."), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                        }
+                        Switch(checked = autoRefresh, onCheckedChange = {
+                            autoRefresh = it
+                            Store.setAutoRefreshEnabled(ctx, it)
+                        })
+                    }
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(uiText("به‌روزرسانی در پس‌زمینه", "Background updates", "التحديث في الخلفية"))
+                            Text(uiText("اجازه بده هنگام بسته بودن برنامه هم قیمت‌ها به‌روز شوند. معمولاً هر ۱۵ دقیقه؛ ممکن است اندروید آن را به تأخیر بیندازد.", "Allow Android to refresh prices when the app is closed. Usually every 15 minutes; Android may delay it.", "اسمح لأندرويد بتحديث الأسعار عند إغلاق التطبيق. عادةً كل ١٥ دقيقة، وقد يؤخر أندرويد ذلك."), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                        }
+                        Switch(checked = backgroundRefresh, onCheckedChange = {
+                            backgroundRefresh = it
+                            Store.setBackgroundRefreshEnabled(ctx, it)
+                            Scheduler.sync(ctx)
+                        })
+                    }
+                }
+            }
         }
         item {
-            Button(
-                enabled = tokenInput.isNotBlank() && !busy,
-                onClick = { Store.setToken(ctx, tokenInput); tokenInput = ""; refresh() },
-            ) { Text("Save token and update") }
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(uiText("منبع داده", "Data source", "مصدر البيانات"), fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                    Text(uiText("صفحات عمومی بازار TGJU · بدون نیاز به کلید API یا توکن الان‌چند.", "TGJU public market pages · No API key or Alanchand token required.", "صفحات السوق العامة من TGJU · لا حاجة إلى مفتاح API أو رمز Alanchand."), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                    StatusLine(snap)
+                    Text(
+                        buildString {
+                            append("Last successful update: ")
+                            append(if (snap.lastSuccessAt > 0) Fmt.time(snap.lastSuccessAt) else "never")
+                            if (snap.sourceTime != null) append("\nSource timestamp: ${snap.sourceTime}")
+                            if (next > 0) append("\nNext refresh allowed: ${if (next <= System.currentTimeMillis()) "now" else Fmt.time(next)}")
+                        },
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp,
+                    )
+                    Button(enabled = !busy, onClick = { refresh() }) { Text(if (busy) uiText("در حال به‌روزرسانی…", "Updating…", "جارٍ التحديث…") else uiText("به‌روزرسانی قیمت‌ها", "Update prices now", "تحديث الأسعار الآن")) }
+                    if (message != null) Text(message!!, fontSize = 13.sp)
+                    Text("Prices are read from public website pages. If TGJU changes its page structure or blocks requests, updates may temporarily fail.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                }
+            }
         }
-        item { StatusLine(snap) }
-        item {
-            Text(
-                buildString {
-                    append("Last successful update: ")
-                    append(if (snap.lastSuccessAt > 0) Fmt.time(snap.lastSuccessAt) else "never")
-                    if (snap.sourceTime != null) append("\nSource timestamp (as reported): ${snap.sourceTime}")
-                    if (next > 0) append("\nNext update allowed: ${if (next <= System.currentTimeMillis()) "now" else Fmt.time(next)}")
-                    append("\nThe API allows one request per hour; the widget updates itself about every 65 minutes.")
-                },
-                color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp,
-            )
-        }
-        item { Button(enabled = !busy, onClick = { refresh() }) { Text(if (busy) "Updating…" else "Update now") } }
-        if (message != null) item { Text(message!!, fontSize = 13.sp) }
     }
 }

@@ -66,6 +66,14 @@ object GoldRepository {
     private const val PREFS = "iran_gold_market"
     private const val CACHE = "popular_json"
 
+    fun refreshIfDue(ctx: Context) {
+        val prefs = ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val now = System.currentTimeMillis()
+        if (now - prefs.getLong("last_fetch", 0L) < 5L * 60 * 1000) return
+        refresh(ctx)
+        prefs.edit().putLong("last_fetch", now).apply()
+    }
+
     fun snapshot(ctx: Context): GoldMarketSnapshot? {
         val raw = ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getString(CACHE, null) ?: return null
@@ -73,63 +81,76 @@ object GoldRepository {
     }
 
     fun refresh(ctx: Context): GoldMarketSnapshot {
-        var connection: HttpURLConnection? = null
-        try {
-            connection = (URL(GOLD_DATA_URL).openConnection() as HttpURLConnection).apply {
-                connectTimeout = 12_000
-                readTimeout = 18_000
-                requestMethod = "GET"
-                setRequestProperty("Accept", "application/json")
-                setRequestProperty("User-Agent", "TomanRates-Android")
-            }
-            if (connection.responseCode != HttpURLConnection.HTTP_OK) {
-                throw IllegalStateException("Market data server returned HTTP ${connection.responseCode}")
-            }
-            val raw = connection.inputStream.bufferedReader().use { it.readText() }
-            val parsed = parse(raw) ?: throw IllegalStateException("Unexpected gold market response")
-            ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                .edit().putString(CACHE, raw).apply()
-            return parsed
-        } finally {
-            connection?.disconnect()
+        val rows = TgjuMarket.parseRows(TgjuMarket.fetchHtml())
+        val gold = rows.values.firstOrNull {
+            it.key.contains("geram18", true) ||
+                it.key.contains("gold_18", true) ||
+                (it.name.contains("۱۸") && it.name.contains("گرم"))
+        } ?: throw IllegalStateException("TGJU 18K gold quote was not found on its public market page")
+        val coin = rows.values.firstOrNull {
+            it.key.contains("sekkeh", true) ||
+                (it.name.contains("سکه") && it.name.contains("امامی"))
         }
+        val result = GoldMarketSnapshot(
+            gold18 = gold.toGoldQuote("طلای ۱۸ عیار"),
+            emamiCoin = coin?.toGoldQuote("سکه امامی"),
+            updatedAt = gold.time,
+            source = "TGJU public market page",
+            stale = false,
+        )
+        val json = org.json.JSONObject().put("gold", quoteJson(result.gold18))
+            .put("source", result.source).put("updated", result.updatedAt ?: "")
+            .put("stale", result.stale)
+        result.emamiCoin?.let { json.put("coin", quoteJson(it)) }
+        ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putString(CACHE, json.toString()).apply()
+        val sampleTime = System.currentTimeMillis()
+        Store.recordPrice(ctx, "gold18", result.gold18.price, sampleTime)
+        result.emamiCoin?.let { Store.recordPrice(ctx, "coin", it.price, sampleTime) }
+        return result
     }
 
-    private fun parse(raw: String): GoldMarketSnapshot? {
-        return try {
-            val root = JSONObject(raw)
-            val rows = root.optJSONArray("data") ?: return null
-            fun find(symbol: String): GoldQuote? {
-                for (i in 0 until rows.length()) {
-                    val item = rows.optJSONObject(i) ?: continue
-                    if (item.optString("symbol") != symbol) continue
-                    val price = item.opt("price")?.toString()?.toBigDecimalOrNull() ?: return null
-                    if (price.signum() <= 0) return null
-                    return GoldQuote(
-                        label = item.optString("name_fa", symbol),
-                        price = price,
-                        changePct = if (item.isNull("change_pct")) null else item.optDouble("change_pct"),
-                        high = item.opt("high")?.toString()?.toBigDecimalOrNull(),
-                        low = item.opt("low")?.toString()?.toBigDecimalOrNull(),
-                        timestampTehran = item.optString("timestamp_tehran", "").ifBlank { null },
-                        stale = item.optBoolean("stale", false),
-                    )
-                }
-                return null
-            }
-            val gold = find("GOLD_18K_IRR") ?: return null
-            val meta = root.optJSONObject("meta") ?: JSONObject()
-            GoldMarketSnapshot(
-                gold18 = gold,
-                emamiCoin = find("COIN_EMAMI_IRR"),
-                updatedAt = meta.optString("updated_at", "").ifBlank { null },
-                source = meta.optString("source", "TGJU"),
-                stale = meta.optBoolean("stale", false) || gold.stale,
+    private fun TgjuMarket.QuoteRow.toGoldQuote(fallback: String) = GoldQuote(
+        label = name.ifBlank { fallback },
+        price = priceToman,
+        changePct = changePct?.multiply(BigDecimal.valueOf(changeSign.toLong()))?.toDouble(),
+        high = highToman,
+        low = lowToman,
+        timestampTehran = time,
+        stale = false,
+    )
+
+    private fun quoteJson(q: GoldQuote) = org.json.JSONObject()
+        .put("label", q.label).put("price", q.price)
+        .put("change", q.changePct ?: org.json.JSONObject.NULL)
+        .put("high", q.high ?: org.json.JSONObject.NULL)
+        .put("low", q.low ?: org.json.JSONObject.NULL)
+        .put("time", q.timestampTehran ?: "")
+
+    private fun parse(raw: String): GoldMarketSnapshot? = try {
+        val root = org.json.JSONObject(raw)
+        fun quote(key: String): GoldQuote? {
+            val item = root.optJSONObject(key) ?: return null
+            val price = item.opt("price")?.toString()?.toBigDecimalOrNull() ?: return null
+            return GoldQuote(
+                label = item.optString("label", key),
+                price = price,
+                changePct = if (item.isNull("change")) null else item.optDouble("change"),
+                high = item.opt("high")?.toString()?.toBigDecimalOrNull(),
+                low = item.opt("low")?.toString()?.toBigDecimalOrNull(),
+                timestampTehran = item.optString("time", "").ifBlank { null },
+                stale = root.optBoolean("stale", false),
             )
-        } catch (_: Exception) {
-            null
         }
-    }
+        val gold = quote("gold") ?: return null
+        GoldMarketSnapshot(
+            gold18 = gold,
+            emamiCoin = quote("coin"),
+            updatedAt = root.optString("updated", "").ifBlank { null },
+            source = root.optString("source", "TGJU"),
+            stale = root.optBoolean("stale", false),
+        )
+    } catch (_: Exception) { null }
 }
 
 @Composable
