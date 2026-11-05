@@ -66,7 +66,7 @@ object TgjuMarket {
             val cells = ArrayList<String>()
             val cellMatcher = cellPattern.matcher(body)
             while (cellMatcher.find()) cells.add(cellMatcher.group(1))
-            val nameMatch = Regex("<th\\b[^>]*>(.*?)</th>", RegexOption.IGNORE_CASE or RegexOption.DOT_MATCHES_ALL).find(body)
+            val nameMatch = Regex("<th\\b[^>]*>(.*?)</th>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)).find(body)
             val name = clean(nameMatch?.groupValues?.getOrNull(1).orEmpty())
             if (name.isBlank()) continue
 
