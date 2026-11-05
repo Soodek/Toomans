@@ -22,12 +22,12 @@ class App : Application() {
 
 object Scheduler {
     /**
-     * Every 65 minutes: a few minutes above the 60 minute rate limit so the periodic run is never rejected by
+     * Every 15 minutes: a few minutes above the 60 minute rate limit so the periodic run is never rejected by
      * the local guard. No network constraint on purpose: when offline the worker must still run so the widget
      * can notice that its data is getting old.
      */
     fun ensure(ctx: Context) {
-        val req = PeriodicWorkRequestBuilder<RefreshWorker>(65, TimeUnit.MINUTES).build()
+        val req = PeriodicWorkRequestBuilder<RefreshWorker>(15, TimeUnit.MINUTES).build()
         WorkManager.getInstance(ctx).enqueueUniquePeriodicWork("rates_periodic", ExistingPeriodicWorkPolicy.KEEP, req)
     }
 
