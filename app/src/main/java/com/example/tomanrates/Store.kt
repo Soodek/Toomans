@@ -24,6 +24,14 @@ object Store {
     fun setBackgroundRefreshEnabled(ctx: Context, enabled: Boolean) =
         p(ctx).edit().putBoolean("background_refresh_enabled", enabled).apply()
 
+    fun darkThemeEnabled(ctx: Context): Boolean = p(ctx).getBoolean("dark_theme_enabled", true)
+    fun setDarkThemeEnabled(ctx: Context, enabled: Boolean) =
+        p(ctx).edit().putBoolean("dark_theme_enabled", enabled).apply()
+
+    fun appLanguage(ctx: Context): String = p(ctx).getString("app_language", "en") ?: "en"
+    fun setAppLanguage(ctx: Context, language: String) =
+        p(ctx).edit().putString("app_language", language).apply()
+
     // ---- selection / order / default
     fun selected(ctx: Context): List<String> {
         val s = p(ctx).getString("selected", null)?.split(",")?.filter { it.isNotBlank() }
