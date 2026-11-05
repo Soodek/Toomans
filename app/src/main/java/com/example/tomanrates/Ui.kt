@@ -367,10 +367,10 @@ fun CurrenciesTab(snap: Snapshot, selected: List<String>, defaultSlug: String, c
         contentPadding = PaddingValues(20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        item { Text("Your currencies", fontSize = 24.sp, fontWeight = FontWeight.Medium) }
+        item { Text(uiText("ارزهای شما", "Your currencies", "عملاتك"), fontSize = 24.sp, fontWeight = FontWeight.Medium) }
         item {
             Text(
-                "The default (★) is the large rate in the widget. The others follow in this order, as many as fit.",
+                uiText("ارز پیش‌فرض (★) نرخ اصلی ویجت است. بقیه به همین ترتیب نمایش داده می‌شوند.", "The default (★) is the large rate in the widget. The others follow in this order, as many as fit.", "العملة الافتراضية (★) هي السعر الرئيسي في الأداة. تظهر العملات الأخرى بهذا الترتيب."),
                 color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp,
             )
         }
@@ -400,25 +400,25 @@ fun CurrenciesTab(snap: Snapshot, selected: List<String>, defaultSlug: String, c
                 }
             }
         }
-        item { Text("Add by API symbol", fontSize = 18.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 12.dp)) }
+        item { Text(uiText("افزودن با نماد API", "Add by API symbol", "إضافة باستخدام رمز API"), fontSize = 18.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 12.dp)) }
         item {
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = symbol, onValueChange = { symbol = it; error = null },
-                    label = { Text("e.g. omr, chf, usd-hav") }, singleLine = true, modifier = Modifier.weight(1f),
+                    label = { Text(uiText("مثلاً omr، chf، usd-hav", "e.g. omr, chf, usd-hav", "مثلاً omr، chf، usd-hav")) }, singleLine = true, modifier = Modifier.weight(1f),
                 )
                 Button(onClick = {
                     error = Store.addSymbol(ctx, symbol)
                     if (error == null) symbol = ""
                     changed()
-                }) { Text("Add") }
+                }) { Text(uiText("افزودن", "Add", "إضافة")) }
             }
         }
         if (error != null) item { Text(error!!, color = RedC, fontSize = 13.sp) }
         item {
             Text(
-                if (snap.rates.isEmpty()) "Available currencies appear here after the first successful update."
-                else "Available in the latest response (tap to add):",
+                if (snap.rates.isEmpty()) uiText("ارزهای موجود پس از اولین به‌روزرسانی موفق نمایش داده می‌شوند.", "Available currencies appear here after the first successful update.", "ستظهر العملات المتاحة هنا بعد أول تحديث ناجح.")
+                else uiText("ارزهای موجود در آخرین پاسخ (برای افزودن انتخاب کنید):", "Available in the latest response (tap to add):", "العملات المتاحة في آخر استجابة (اضغط للإضافة):"),
                 color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp,
             )
         }
@@ -474,12 +474,12 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
 
     val next = RateRepository.nextAllowedAt(ctx)
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        item { Text(when (UiPreferences.language.value) { "fa" -> "تنظیمات"; "ar" -> "الإعدادات"; else -> "Settings" }, fontSize = 24.sp, fontWeight = FontWeight.Medium) }
+        item { Text(uiText("تنظیمات", "Settings", "الإعدادات"), fontSize = 24.sp, fontWeight = FontWeight.Medium) }
         item {
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(when (UiPreferences.language.value) { "fa" -> "ظاهر برنامه"; "ar" -> "مظهر التطبيق"; else -> "Appearance" }, fontSize = 18.sp, fontWeight = FontWeight.Medium)
-                    Text(when (UiPreferences.language.value) { "fa" -> "حالت پوسته"; "ar" -> "المظهر"; else -> "Theme" }, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                    Text(uiText("ظاهر برنامه", "Appearance", "مظهر التطبيق"), fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                    Text(uiText("حالت پوسته", "Theme", "المظهر"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(
                             selected = UiPreferences.dark.value,
@@ -487,7 +487,7 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
                                 UiPreferences.dark.value = true
                                 Store.setDarkThemeEnabled(ctx, true)
                             },
-                            label = { Text(when (UiPreferences.language.value) { "fa" -> "تیره"; "ar" -> "داكن"; else -> "Dark" }) },
+                            label = { Text(uiText("تیره", "Dark", "داكن")) },
                         )
                         FilterChip(
                             selected = !UiPreferences.dark.value,
@@ -495,10 +495,10 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
                                 UiPreferences.dark.value = false
                                 Store.setDarkThemeEnabled(ctx, false)
                             },
-                            label = { Text(when (UiPreferences.language.value) { "fa" -> "روشن"; "ar" -> "فاتح"; else -> "Light" }) },
+                            label = { Text(uiText("روشن", "Light", "فاتح")) },
                         )
                     }
-                    Text(when (UiPreferences.language.value) { "fa" -> "زبان برنامه"; "ar" -> "لغة التطبيق"; else -> "App language" }, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                    Text(uiText("زبان برنامه", "App language", "لغة التطبيق"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(
                             selected = UiPreferences.language.value == "en",
@@ -526,11 +526,11 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
                         )
                     }
                     Text(
-                        when (UiPreferences.language.value) {
-                            "fa" -> "تغییر پوسته فوراً اعمال می‌شود. ترجمه زبان هنوز به بخش‌های اصلی و تنظیمات محدود است."
-                            "ar" -> "يُطبّق تغيير المظهر فوراً. الترجمة متاحة حالياً للأقسام الرئيسية والإعدادات."
-                            else -> "Theme changes apply immediately. Language currently applies to the main navigation, calculator heading and settings."
-                        },
+                        uiText(
+                            "تغییر زبان و پوسته فوراً اعمال می‌شود.",
+                            "Language and theme changes apply immediately.",
+                            "يتم تطبيق تغييرات اللغة والمظهر فوراً."
+                        ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp,
                     )
                 }
@@ -539,11 +539,11 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
         item {
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(if (UiPreferences.language.value == "fa") "به‌روزرسانی قیمت‌ها" else "Price updates", fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                    Text(uiText("به‌روزرسانی قیمت‌ها", "Price updates", "تحديث الأسعار"), fontSize = 18.sp, fontWeight = FontWeight.Medium)
                     Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("Automatic updates")
-                            Text("Refresh prices about once a minute while the app is open.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                            Text(uiText("به‌روزرسانی خودکار", "Automatic updates", "التحديثات التلقائية"))
+                            Text(uiText("هنگام باز بودن برنامه، قیمت‌ها تقریباً هر یک دقیقه بررسی می‌شوند.", "Refresh prices about once a minute while the app is open.", "يتم تحديث الأسعار تقريباً كل دقيقة أثناء فتح التطبيق."), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                         }
                         Switch(checked = autoRefresh, onCheckedChange = {
                             autoRefresh = it
@@ -552,8 +552,8 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
                     }
                     Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("Background updates")
-                            Text("Allow Android to refresh prices when the app is closed. Usually every 15 minutes; Android may delay it.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                            Text(uiText("به‌روزرسانی در پس‌زمینه", "Background updates", "التحديث في الخلفية"))
+                            Text(uiText("اجازه بده هنگام بسته بودن برنامه هم قیمت‌ها به‌روز شوند. معمولاً هر ۱۵ دقیقه؛ ممکن است اندروید آن را به تأخیر بیندازد.", "Allow Android to refresh prices when the app is closed. Usually every 15 minutes; Android may delay it.", "اسمح لأندرويد بتحديث الأسعار عند إغلاق التطبيق. عادةً كل ١٥ دقيقة، وقد يؤخر أندرويد ذلك."), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                         }
                         Switch(checked = backgroundRefresh, onCheckedChange = {
                             backgroundRefresh = it
@@ -567,8 +567,8 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
         item {
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Data source", fontSize = 18.sp, fontWeight = FontWeight.Medium)
-                    Text("TGJU public market pages · No API key or Alanchand token required.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                    Text(uiText("منبع داده", "Data source", "مصدر البيانات"), fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                    Text(uiText("صفحات عمومی بازار TGJU · بدون نیاز به کلید API یا توکن الان‌چند.", "TGJU public market pages · No API key or Alanchand token required.", "صفحات السوق العامة من TGJU · لا حاجة إلى مفتاح API أو رمز Alanchand."), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                     StatusLine(snap)
                     Text(
                         buildString {
@@ -579,7 +579,7 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
                         },
                         color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp,
                     )
-                    Button(enabled = !busy, onClick = { refresh() }) { Text(if (busy) "Updating…" else "Update prices now") }
+                    Button(enabled = !busy, onClick = { refresh() }) { Text(if (busy) uiText("در حال به‌روزرسانی…", "Updating…", "جارٍ التحديث…") else uiText("به‌روزرسانی قیمت‌ها", "Update prices now", "تحديث الأسعار الآن")) }
                     if (message != null) Text(message!!, fontSize = 13.sp)
                     Text("Prices are read from public website pages. If TGJU changes its page structure or blocks requests, updates may temporarily fail.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 }
