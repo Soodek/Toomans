@@ -36,6 +36,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -72,10 +75,20 @@ private val GreenC = Color(0xFF4ADE80)
 private val AmberC = Color(0xFFFBBF24)
 private val RedC = Color(0xFFF87171)
 
+private object UiPreferences {
+    val dark = mutableStateOf(true)
+    val language = mutableStateOf("en")
+}
+
 @Composable
 fun TomanTheme(content: @Composable () -> Unit) {
+    val ctx = LocalContext.current
+    LaunchedEffect(Unit) {
+        UiPreferences.dark.value = Store.darkThemeEnabled(ctx)
+        UiPreferences.language.value = Store.appLanguage(ctx)
+    }
     MaterialTheme(
-        colorScheme = darkColorScheme(
+        colorScheme = if (UiPreferences.dark.value) darkColorScheme(
             primary = Color(0xFF7DB7FF),
             background = Color(0xFF111318),
             surface = Color(0xFF17191F),
@@ -83,6 +96,14 @@ fun TomanTheme(content: @Composable () -> Unit) {
             onBackground = Color(0xFFECEEF3),
             onSurface = Color(0xFFECEEF3),
             onSurfaceVariant = Color(0xFFA9AEBB),
+        ) else lightColorScheme(
+            primary = Color(0xFF1769AA),
+            background = Color(0xFFF5F6F8),
+            surface = Color(0xFFFFFFFF),
+            surfaceVariant = Color(0xFFE8EBF0),
+            onBackground = Color(0xFF17191F),
+            onSurface = Color(0xFF17191F),
+            onSurfaceVariant = Color(0xFF5E6570),
         ),
         content = content,
     )
@@ -96,20 +117,6 @@ fun TomanApp(requested: String?) {
     var slug by remember { mutableStateOf(Store.defaultSlug(ctx)) }
     var refreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-
-    fun refreshPrices() {
-        if (refreshing) return
-        scope.launch {
-            refreshing = true
-            withContext(Dispatchers.IO) {
-                RateRepository.refresh(ctx)
-                runCatching { GoldRepository.refreshIfDue(ctx) }
-            }
-            refreshing = false
-            tick++
-            WidgetRenderer.updateAll(ctx)
-        }
-    }
 
     LaunchedEffect(requested) {
         if (requested != null) { slug = requested; tab = 0 }
@@ -148,9 +155,6 @@ fun TomanApp(requested: String?) {
                     }
                 }
                 Spacer(Modifier.weight(1f))
-                IconButton(onClick = { refreshPrices() }, enabled = !refreshing) {
-                    Icon(imageVector = Icons.Filled.Refresh, contentDescription = "Refresh prices")
-                }
             }
         },
         floatingActionButton = {
@@ -165,7 +169,13 @@ fun TomanApp(requested: String?) {
                 containerColor = MaterialTheme.colorScheme.surface,
                 tonalElevation = 0.dp,
             ) {
-                listOf("Calculator", "Currencies", "Gold", "AI", "Settings").forEachIndexed { i, label ->
+                listOf(
+                    if (UiPreferences.language.value == "fa") "ماشین‌حساب" else "Calculator",
+                    if (UiPreferences.language.value == "fa") "ارزها" else "Currencies",
+                    if (UiPreferences.language.value == "fa") "طلا" else "Gold",
+                    if (UiPreferences.language.value == "fa") "هوش مصنوعی" else "AI",
+                    if (UiPreferences.language.value == "fa") "تنظیمات" else "Settings",
+                ).forEachIndexed { i, label ->
                     val isSelected = tab == i
                     val icon = when (i) {
                         0 -> Icons.Filled.Calculate
@@ -193,7 +203,7 @@ fun TomanApp(requested: String?) {
     ) { pad ->
         Box(Modifier.padding(pad).fillMaxSize()) {
             when (tab) {
-                0 -> CalculatorTab(snap, selected, slug) { slug = it }
+                0 -> CalculatorTab(snap, selected, slug, { slug = it }, changed)
                 1 -> CurrenciesTab(snap, selected, defaultSlug, changed)
                 2 -> GoldTab()
                 3 -> AiAssistantTab(snap)
@@ -235,15 +245,35 @@ fun parseAmount(s: String): BigDecimal? {
 }
 
 @Composable
-fun CalculatorTab(snap: Snapshot, selected: List<String>, slug: String, onSlug: (String) -> Unit) {
+fun CalculatorTab(snap: Snapshot, selected: List<String>, slug: String, onSlug: (String) -> Unit, onPriceRefresh: () -> Unit) {
     var amount by remember { mutableStateOf("1") }
     val cur = if (slug in selected) slug else selected.first()
     val rate = snap.rates[cur]
     val unit = rate?.let { Catalog.unitOf(it.name) } ?: 1
     val value = parseAmount(amount)
 
+    val isFa = UiPreferences.language.value == "fa"
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var updating by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 92.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text("Calculator", fontSize = 24.sp, fontWeight = FontWeight.Medium)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Text(if (isFa) "ماشین‌حساب" else "Calculator", fontSize = 24.sp, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.weight(1f))
+            IconButton(enabled = !updating, onClick = {
+                scope.launch {
+                    updating = true
+                    withContext(Dispatchers.IO) {
+                        RateRepository.refresh(ctx)
+                        runCatching { GoldRepository.refreshIfDue(ctx) }
+                    }
+                    updating = false
+                    onPriceRefresh()
+                }
+            }) {
+                Icon(Icons.Filled.Refresh, contentDescription = if (isFa) "به‌روزرسانی قیمت‌ها" else "Refresh prices")
+            }
+        }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(selected) { s ->
                 FilterChip(
