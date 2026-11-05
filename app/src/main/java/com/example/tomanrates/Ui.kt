@@ -1,5 +1,6 @@
 package com.example.tomanrates
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -452,6 +453,9 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var autoRefresh by remember { mutableStateOf(Store.autoRefreshEnabled(ctx)) }
     var backgroundRefresh by remember { mutableStateOf(Store.backgroundRefreshEnabled(ctx)) }
+    var widgetExpanded by remember { mutableStateOf(false) }
+    var widgetSelected by remember { mutableStateOf(Store.widgetSelected(ctx)) }
+    var widgetHero by remember { mutableStateOf(Store.widgetDefaultSlug(ctx)) }
 
     fun refresh() {
         scope.launch {
@@ -560,6 +564,51 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
                             Store.setBackgroundRefreshEnabled(ctx, it)
                             Scheduler.sync(ctx)
                         })
+                    }
+                }
+            }
+        }
+        item {
+            Card(modifier = Modifier.fillMaxWidth().clickable { widgetExpanded = !widgetExpanded }.animateContentSize(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Icon(Icons.Filled.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                            Text(uiText("شخصی‌سازی ویجت", "Widget customization", "تخصيص الأداة"), fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                            Text(uiText("انتخاب ارزهای صفحه اصلی", "Choose home-screen currencies", "اختر عملات الشاشة الرئيسية"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                        }
+                        Text(if (widgetExpanded) "⌃" else "⌄", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if (widgetExpanded) {
+                        Text(uiText("ارزهای ویجت (حداکثر ۵ مورد)", "Widget currencies (up to 5)", "عملات الأداة (حتى ٥)"), fontWeight = FontWeight.Medium)
+                        val available = (snap.rates.keys + Store.selected(ctx)).distinct().sorted()
+                        available.chunked(2).forEach { pair ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                pair.forEach { symbol ->
+                                    FilterChip(selected = symbol in widgetSelected, onClick = {
+                                        val next = if (symbol in widgetSelected) widgetSelected - symbol else if (widgetSelected.size < 5) widgetSelected + symbol else widgetSelected
+                                        if (next.isNotEmpty()) {
+                                            widgetSelected = next
+                                            if (widgetHero !in next) widgetHero = next.first()
+                                            Store.setWidgetSelected(ctx, next)
+                                            Store.setWidgetDefaultSlug(ctx, widgetHero)
+                                            changed()
+                                        }
+                                    }, label = { Text(Catalog.code(symbol)) })
+                                }
+                            }
+                        }
+                        Text(uiText("ارز اصلی ویجت", "Main widget currency", "العملة الرئيسية للأداة"), fontWeight = FontWeight.Medium)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            widgetSelected.forEach { symbol ->
+                                FilterChip(selected = widgetHero == symbol, onClick = {
+                                    widgetHero = symbol
+                                    Store.setWidgetDefaultSlug(ctx, symbol)
+                                    changed()
+                                }, label = { Text(Catalog.code(symbol)) })
+                            }
+                        }
+                        Text(uiText("تغییرات بلافاصله روی ویجت اعمال می‌شوند.", "Changes apply to the widget immediately.", "يتم تطبيق التغييرات على الأداة فوراً."), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                     }
                 }
             }
