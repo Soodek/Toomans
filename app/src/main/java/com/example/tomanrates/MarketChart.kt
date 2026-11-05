@@ -50,8 +50,8 @@ fun MarketChartInline(snap: Snapshot, calculatorAsset: String) {
     val current = quote?.price ?: rate?.sell
     val change = quote?.changePct ?: rate?.dayChange?.toDouble()
     val name = when(asset) {
-        "gold18" -> "طلای ۱۸ عیار"
-        "coin" -> "سکه امامی"
+        "gold18" -> uiText("طلای ۱۸ عیار", "18K Gold", "ذهب عيار ١٨")
+        "coin" -> uiText("سکه امامی", "Emami Coin", "عملة إمامي")
         else -> "${Catalog.flag(asset)}  ${Catalog.code(asset)} · ${Catalog.englishName(asset, rate?.name)}"
     }
     val points = remember(asset, rangeIndex, snap.lastSuccessAt) {
@@ -68,8 +68,8 @@ fun MarketChartInline(snap: Snapshot, calculatorAsset: String) {
     val lineColor = MaterialTheme.colorScheme.primary
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-            Text("نمودار بازار", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            Text("تاریخچه قیمت واقعی", color = muted, fontSize = 12.sp)
+            Text(uiText("نمودار بازار", "Market chart", "مخطط السوق"), fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Text(uiText("تاریخچه قیمت واقعی", "Historical prices", "سجل الأسعار"), color = muted, fontSize = 12.sp)
         }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
             items(assets) { item ->
@@ -84,7 +84,7 @@ fun MarketChartInline(snap: Snapshot, calculatorAsset: String) {
                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text(current?.let { Fmt.toman(it) } ?: "—", fontSize = 27.sp, fontWeight = FontWeight.Bold)
-                        Text("تومان", color = muted, fontSize = 12.sp)
+                        Text(uiText("تومان", "Toman", "تومان"), color = muted, fontSize = 12.sp)
                     }
                     if (change != null) {
                         Text("${if (change >= 0) "▲ +" else "▼ "}${"%.2f".format(Locale.US, change)}٪",
@@ -94,7 +94,7 @@ fun MarketChartInline(snap: Snapshot, calculatorAsset: String) {
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     chartRanges.forEachIndexed { index, item ->
-                        FilterChip(selected = rangeIndex == index, onClick = { rangeIndex = index }, label = { Text(item.label, fontSize = 12.sp) })
+                        FilterChip(selected = rangeIndex == index, onClick = { rangeIndex = index }, label = { Text(when(index) { 0 -> uiText("۲۴ ساعت", "24 hours", "٢٤ ساعة"); 1 -> uiText("۷ روز", "7 days", "٧ أيام"); else -> uiText("۳۰ روز", "30 days", "٣٠ يوماً") }, fontSize = 12.sp) })
                     }
                 }
                 if (displayPoints.size >= 2) {
@@ -142,18 +142,18 @@ fun MarketChartInline(snap: Snapshot, calculatorAsset: String) {
                         drawCircle(surface, 2.dp.toPx(), latest)
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Column { Text("کمترین", color=muted, fontSize=11.sp); Text(Fmt.toman(java.math.BigDecimal.valueOf(minPoint.price)), fontSize=12.sp) }
-                        Column(horizontalAlignment=androidx.compose.ui.Alignment.End) { Text("بیشترین", color=muted, fontSize=11.sp); Text(Fmt.toman(java.math.BigDecimal.valueOf(maxPoint.price)), fontSize=12.sp) }
+                        Column { Text(uiText("کمترین", "Low", "الأدنى"), color=muted, fontSize=11.sp); Text(Fmt.toman(java.math.BigDecimal.valueOf(minPoint.price)), fontSize=12.sp) }
+                        Column(horizontalAlignment=androidx.compose.ui.Alignment.End) { Text(uiText("بیشترین", "High", "الأعلى"), color=muted, fontSize=11.sp); Text(Fmt.toman(java.math.BigDecimal.valueOf(maxPoint.price)), fontSize=12.sp) }
                     }
-                    Text("از ${Fmt.time(first.timestamp)} تا ${Fmt.time(last.timestamp)} · ${points.size} نمونه واقعی", color=muted, fontSize=11.sp)
+                    Text(uiText("از ${Fmt.time(first.timestamp)} تا ${Fmt.time(last.timestamp)} · ${points.size} نمونه", "From ${Fmt.time(first.timestamp)} to ${Fmt.time(last.timestamp)} · ${points.size} samples", "من ${Fmt.time(first.timestamp)} إلى ${Fmt.time(last.timestamp)} · ${points.size} عينة"), color=muted, fontSize=11.sp)
                 } else {
                     Text(
-                        if (displayPoints.isEmpty()) "هنوز تاریخچه‌ای برای این دارایی جمع نشده. بعد از دریافت به‌روزرسانی‌های واقعی، نمودار نمایش داده می‌شود."
-                        else "برای رسم نمودار موجی، حداقل دو به‌روزرسانی واقعی لازم است.",
+                        if (displayPoints.isEmpty()) uiText("هنوز تاریخچه‌ای برای این دارایی جمع نشده.", "No history has been collected for this asset yet.", "لم يتم جمع سجل لهذا الأصل بعد.")
+                        else uiText("برای رسم نمودار حداقل دو داده لازم است.", "At least two data points are needed to draw the chart.", "يلزم نقطتا بيانات على الأقل لرسم المخطط."),
                         color = muted, fontSize = 12.sp
                     )
                 }
-                if (current != null) Text("قیمت فعلی از آخرین داده دریافتی · نمودار از تاریخچه ذخیره‌شده", color=muted, fontSize=11.sp)
+                if (current != null) Text(uiText("قیمت فعلی از آخرین داده دریافتی · نمودار از تاریخچه ذخیره‌شده", "Current quote from latest update · chart from stored history", "السعر الحالي من آخر تحديث · المخطط من السجل المحفوظ"), color=muted, fontSize=11.sp)
             }
         }
     }
