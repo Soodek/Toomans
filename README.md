@@ -2,8 +2,6 @@
 
 Toomans is an Android app and home-screen widget for tracking Iranian free-market currency prices, gold and coin quotes, market movements, and related news. It has grown from a lightweight currency-rate widget into a multi-section market companion.
 
-> **Development status:** The feature branch contains the additions described below. Build and device verification are tracked separately; a successful CI build does not replace testing on a physical Android device.
-
 ## What changed since the first version
 
 The first version focused on displaying currency selling prices in a home-screen widget and a basic in-app calculator. The current development version adds or expands the following:
@@ -62,36 +60,41 @@ The first version focused on displaying currency selling prices in a home-screen
 ### 8. Home-screen widget and background updates
 - Retains the original home-screen currency widget.
 - Widget and app use the same stored currency selection and cached market data.
-- WorkManager handles scheduled background refreshes; background refresh can be disabled in Settings.
+- WorkManager schedules background refresh work; background refresh can be disabled in Settings.
 - Android battery optimization may delay background work. On Samsung devices, check that Toomans is not placed in Sleeping apps if timely background updates are important.
 
-## Data sources and update behavior
+## How it works
 
-- **Currency and gold/coin data:** TGJU public market pages, parsed by the app.
-- **News:** Public RSS feeds listed above.
-- **AI:** Cloudflare Worker calling the OpenAI Responses API.
-- Currency refresh attempts have a local one-minute guard. Gold refreshes have their own five-minute guard. News feeds are cached for up to three hours, with a shorter minimum interval for forced refreshes.
-- A refresh schedule is not a promise that the source itself publishes new prices at that frequency. The app can only display the latest information available from its sources.
+1. **Fetch market data:** The app requests public currency and gold/coin market pages from TGJU. It parses the available quotes and market details into structured data. No Alanchand API token is required by the current market-data implementation.
+2. **Save a local snapshot:** After a successful currency update, the app stores the latest response in private app storage and records a local price-history sample. Gold and coin quotes are cached separately and are also added to local history.
+3. **Display data with its status:** The calculator, currency list, gold section, chart, and widget read from the locally stored data. The app distinguishes live, delayed, and unavailable currency data so an old cached quote is not silently presented as a fresh update.
+4. **Refresh at controlled intervals:** Currency refresh attempts are guarded by a one-minute local interval. Gold has a separate five-minute refresh guard. While the app is open, automatic refresh checks run about once per minute when enabled; WorkManager also schedules background work. Android may delay background execution, and source updates may be less frequent than app checks.
+5. **Build the chart from samples collected on this device:** Price history is recorded as the app successfully receives quotes. The chart offers 24-hour, 7-day, and 30-day windows, but it cannot display historical prices from before collection began. A smooth or populated chart requires enough real samples over time.
+6. **Load news from RSS:** The news section downloads public RSS feeds, caches their contents on the device, and filters the latest items by country/region names found in headlines and summaries. Oman Observer is included in the Oman feed view. Selecting an article opens the publisher's original page; images appear only when a feed provides a usable image.
+7. **Send AI questions through the Worker:** The assistant sends the user's question, recent chat context, and the app's available cached market snapshot to the configured Cloudflare Worker. The Worker communicates with the OpenAI API and returns the assistant's response. The API key is kept on the Worker side rather than inside the Android app.
 
-## Build the Android APK
+### Current update intervals and limitations
+- Currency: one-minute minimum interval between requests.
+- Gold/coin: five-minute refresh guard.
+- News: cached for up to three hours; a manual refresh is also throttled.
+- Background work is best-effort and can be delayed by Android battery management.
+- The chart is based on locally collected samples, not a complete third-party historical price feed.
+- Country news filters search general RSS content; they are not guaranteed to find every story about a country.
 
-1. Install the current stable Android Studio.
-2. Open the repository in Android Studio and allow Gradle sync to complete.
-3. Install/accept Android SDK 35 if prompted.
-4. Use **Build → Build Bundle(s) / APK(s) → Build APK(s)**.
-5. The debug APK is normally written to `app/build/outputs/apk/debug/app-debug.apk`.
+## Install the app
 
-Command line (with the Gradle wrapper available):
+To install Toomans on an Android phone:
 
-```sh
-./gradlew assembleDebug
-```
+1. Download the latest successful **TomanRates-debug-apk** artifact from the repository's [GitHub Actions](https://github.com/Soodek/Toomans/actions) page. Open the latest successful run for the development branch, then download the artifact named **TomanRates-debug-apk**.
+2. Extract the downloaded ZIP file. Inside it, locate **app-debug.apk**.
+3. Transfer the APK to your Android phone if you downloaded it on another device.
+4. Open the APK using Files / My Files and approve **Install unknown apps** for that app if Android asks.
+5. Tap **Install**, then open Toomans.
+6. To add the currency widget, long-press an empty area of the home screen, open **Widgets**, find Toomans / Toman Rates, and place the widget.
 
-On Windows:
+**Requirements:** Android 8.0 (API 26) or newer and an internet connection for current market prices, news, and AI features.
 
-```bat
-gradlew.bat assembleDebug
-```
+**Updating an existing installation:** Install the newer APK over the existing app when Android accepts its signing certificate. If Android reports a signature or package conflict, the APK was signed with a different key. Uninstalling the old app may then be required before installing the new one; uninstalling erases the app's locally stored settings, cached data, and chart history.
 
 ## AI Worker setup (optional self-hosting)
 
@@ -99,7 +102,7 @@ The Android app currently points to a configured Worker endpoint in `Assistant.k
 
 1. Deploy the Worker from the `worker/` directory with Wrangler.
 2. Add your OpenAI API key as a Worker secret; never commit it to Git.
-3. Update the configured Worker URL in `Assistant.kt`, then build the app.
+3. Update the configured Worker URL in `Assistant.kt` in a developer build.
 
 Example commands:
 
@@ -116,7 +119,6 @@ See [worker/README.md](worker/README.md) for deployment and rate-limit details.
 
 - The OpenAI API key should remain in the Cloudflare Worker secret store and must not be embedded in the Android client.
 - App preferences and cached market data are stored in app-private local storage.
-- Do not share a build containing personal credentials or private configuration.
 - News content is fetched from third-party RSS providers and article links open on their original websites.
 
 ## Known limitations
