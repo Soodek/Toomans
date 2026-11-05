@@ -13,11 +13,8 @@ data class Snapshot(
 )
 
 object RateRepository {
-    /** Alanchand's test tier allows one request per hour per user. Never call more often than this. */
-    const val MIN_INTERVAL_MS = 60 * 60 * 1000L
-
-    /** Prices older than this are no longer shown as prices in the widget. */
-    const val STALE_AFTER_MS = 3 * 60 * 60 * 1000L
+    const val MIN_INTERVAL_MS = 60 * 1000L
+    const val STALE_AFTER_MS = 10 * 60 * 1000L
 
     sealed class Outcome {
         object Updated : Outcome()
@@ -26,24 +23,27 @@ object RateRepository {
         object NoToken : Outcome()
     }
 
-    /** The only place that talks to the network. Both the hourly worker and the Refresh button go through it. */
     @Synchronized
     fun refresh(ctx: Context): Outcome {
-        val token = Store.token(ctx)
-        if (token.isBlank()) return Outcome.NoToken
         val now = System.currentTimeMillis()
         val last = Store.lastAttemptAt(ctx)
         if (last > 0 && (now - last) in 0 until MIN_INTERVAL_MS) {
             return Outcome.TooSoon(last + MIN_INTERVAL_MS)
         }
-        return when (val r = Api.fetch(token)) {
+        return when (val result = Api.fetch()) {
             is FetchResult.Ok -> {
-                Store.saveSuccess(ctx, r.raw, System.currentTimeMillis())
-                Outcome.Updated
+                val parsed = Api.parse(result.raw)
+                if (parsed.isEmpty()) {
+                    Store.saveFailure(ctx, "No supported market prices found", now)
+                    Outcome.Failed("No supported market prices found")
+                } else {
+                    Store.saveSuccess(ctx, result.raw, System.currentTimeMillis())
+                    Outcome.Updated
+                }
             }
             is FetchResult.Fail -> {
-                Store.saveFailure(ctx, r.reason, if (r.reachedServer) now else null)
-                Outcome.Failed(r.reason)
+                Store.saveFailure(ctx, result.reason, if (result.reachedServer) now else null)
+                Outcome.Failed(result.reason)
             }
         }
     }
@@ -59,7 +59,6 @@ object RateRepository {
         val rates = if (raw.isBlank()) emptyMap() else Api.parse(raw)
         val ok = Store.lastSuccessAt(ctx)
         val status = when {
-            Store.token(ctx).isBlank() -> Status.NO_TOKEN
             ok == 0L || rates.isEmpty() -> Status.NEVER
             now - ok > STALE_AFTER_MS -> Status.UNAVAILABLE
             Store.lastAttemptOk(ctx) -> Status.LIVE
