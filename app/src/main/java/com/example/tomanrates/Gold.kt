@@ -66,6 +66,14 @@ object GoldRepository {
     private const val PREFS = "iran_gold_market"
     private const val CACHE = "popular_json"
 
+    fun refreshIfDue(ctx: Context) {
+        val prefs = ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val now = System.currentTimeMillis()
+        if (now - prefs.getLong("last_fetch", 0L) < 5L * 60 * 1000) return
+        refresh(ctx)
+        prefs.edit().putLong("last_fetch", now).apply()
+    }
+
     fun snapshot(ctx: Context): GoldMarketSnapshot? {
         val raw = ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getString(CACHE, null) ?: return null
