@@ -436,11 +436,60 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
 
     val next = RateRepository.nextAllowedAt(ctx)
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        item { Text("Settings", fontSize = 24.sp, fontWeight = FontWeight.Medium) }
+        item { Text(if (UiPreferences.language.value == "fa") "تنظیمات" else "Settings", fontSize = 24.sp, fontWeight = FontWeight.Medium) }
         item {
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Price updates", fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                    Text(if (UiPreferences.language.value == "fa") "ظاهر برنامه" else "Appearance", fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                    Text(if (UiPreferences.language.value == "fa") "حالت پوسته" else "Theme", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = UiPreferences.dark.value,
+                            onClick = {
+                                UiPreferences.dark.value = true
+                                Store.setDarkThemeEnabled(ctx, true)
+                            },
+                            label = { Text(if (UiPreferences.language.value == "fa") "تیره" else "Dark") },
+                        )
+                        FilterChip(
+                            selected = !UiPreferences.dark.value,
+                            onClick = {
+                                UiPreferences.dark.value = false
+                                Store.setDarkThemeEnabled(ctx, false)
+                            },
+                            label = { Text(if (UiPreferences.language.value == "fa") "روشن" else "Light") },
+                        )
+                    }
+                    Text(if (UiPreferences.language.value == "fa") "زبان برنامه" else "App language", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = UiPreferences.language.value == "en",
+                            onClick = {
+                                UiPreferences.language.value = "en"
+                                Store.setAppLanguage(ctx, "en")
+                            },
+                            label = { Text("English") },
+                        )
+                        FilterChip(
+                            selected = UiPreferences.language.value == "fa",
+                            onClick = {
+                                UiPreferences.language.value = "fa"
+                                Store.setAppLanguage(ctx, "fa")
+                            },
+                            label = { Text("فارسی") },
+                        )
+                    }
+                    Text(
+                        if (UiPreferences.language.value == "fa") "تغییر پوسته فوراً اعمال می‌شود. زبان فعلاً روی بخش‌های اصلی و تنظیمات اعمال شده است." else "Theme changes apply immediately. Language currently applies to the main navigation, calculator heading and settings.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp,
+                    )
+                }
+            }
+        }
+        item {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(if (UiPreferences.language.value == "fa") "به‌روزرسانی قیمت‌ها" else "Price updates", fontSize = 18.sp, fontWeight = FontWeight.Medium)
                     Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text("Automatic updates")
