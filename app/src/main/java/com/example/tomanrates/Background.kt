@@ -41,7 +41,10 @@ object Scheduler {
 
 class RefreshWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
     override suspend fun doWork(): Result {
-        withContext(Dispatchers.IO) { RateRepository.refresh(applicationContext) }
+        withContext(Dispatchers.IO) {
+            RateRepository.refresh(applicationContext)
+            runCatching { GoldRepository.refreshIfDue(applicationContext) }
+        }
         WidgetRenderer.updateAll(applicationContext)
         return Result.success() // never retry/backoff: retries would burn the rate limit
     }
