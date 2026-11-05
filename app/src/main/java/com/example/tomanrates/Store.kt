@@ -1,6 +1,7 @@
 package com.example.tomanrates
 
 import android.content.Context
+import java.math.BigDecimal
 
 /** All persisted state. Private app storage, backups disabled in the manifest. */
 object Store {
