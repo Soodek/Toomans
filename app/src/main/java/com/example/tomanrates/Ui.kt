@@ -40,6 +40,9 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -104,7 +107,11 @@ fun TomanTheme(content: @Composable () -> Unit) {
             onSurface = Color(0xFF17191F),
             onSurfaceVariant = Color(0xFF5E6570),
         ),
-        content = content,
+        content = {
+            CompositionLocalProvider(
+                LocalLayoutDirection provides if (UiPreferences.language.value == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr,
+            ) { content() }
+        },
     )
 }
 
@@ -169,11 +176,11 @@ fun TomanApp(requested: String?) {
                 tonalElevation = 0.dp,
             ) {
                 listOf(
-                    if (UiPreferences.language.value == "fa") "ماشین‌حساب" else "Calculator",
-                    if (UiPreferences.language.value == "fa") "ارزها" else "Currencies",
-                    if (UiPreferences.language.value == "fa") "طلا" else "Gold",
-                    if (UiPreferences.language.value == "fa") "هوش مصنوعی" else "AI",
-                    if (UiPreferences.language.value == "fa") "تنظیمات" else "Settings",
+                    when (UiPreferences.language.value) { "fa" -> "ماشین‌حساب"; "ar" -> "الحاسبة"; else -> "Calculator" },
+                    when (UiPreferences.language.value) { "fa" -> "ارزها"; "ar" -> "العملات"; else -> "Currencies" },
+                    when (UiPreferences.language.value) { "fa" -> "طلا"; "ar" -> "الذهب"; else -> "Gold" },
+                    when (UiPreferences.language.value) { "fa" -> "هوش مصنوعی"; "ar" -> "الذكاء الاصطناعي"; else -> "AI" },
+                    when (UiPreferences.language.value) { "fa" -> "تنظیمات"; "ar" -> "الإعدادات"; else -> "Settings" },
                 ).forEachIndexed { i, label ->
                     val isSelected = tab == i
                     val icon = when (i) {
@@ -252,12 +259,13 @@ fun CalculatorTab(snap: Snapshot, selected: List<String>, slug: String, onSlug: 
     val value = parseAmount(amount)
 
     val isFa = UiPreferences.language.value == "fa"
+    val isAr = UiPreferences.language.value == "ar"
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var updating by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 92.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-            Text(if (isFa) "ماشین‌حساب" else "Calculator", fontSize = 24.sp, fontWeight = FontWeight.Medium)
+            Text(when { isFa -> "ماشین‌حساب"; isAr -> "الحاسبة"; else -> "Calculator" }, fontSize = 24.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.weight(1f))
             IconButton(enabled = !updating, onClick = {
                 scope.launch {
@@ -435,12 +443,12 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
 
     val next = RateRepository.nextAllowedAt(ctx)
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        item { Text(if (UiPreferences.language.value == "fa") "تنظیمات" else "Settings", fontSize = 24.sp, fontWeight = FontWeight.Medium) }
+        item { Text(when (UiPreferences.language.value) { "fa" -> "تنظیمات"; "ar" -> "الإعدادات"; else -> "Settings" }, fontSize = 24.sp, fontWeight = FontWeight.Medium) }
         item {
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(if (UiPreferences.language.value == "fa") "ظاهر برنامه" else "Appearance", fontSize = 18.sp, fontWeight = FontWeight.Medium)
-                    Text(if (UiPreferences.language.value == "fa") "حالت پوسته" else "Theme", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                    Text(when (UiPreferences.language.value) { "fa" -> "ظاهر برنامه"; "ar" -> "مظهر التطبيق"; else -> "Appearance" }, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                    Text(when (UiPreferences.language.value) { "fa" -> "حالت پوسته"; "ar" -> "المظهر"; else -> "Theme" }, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(
                             selected = UiPreferences.dark.value,
@@ -448,7 +456,7 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
                                 UiPreferences.dark.value = true
                                 Store.setDarkThemeEnabled(ctx, true)
                             },
-                            label = { Text(if (UiPreferences.language.value == "fa") "تیره" else "Dark") },
+                            label = { Text(when (UiPreferences.language.value) { "fa" -> "تیره"; "ar" -> "داكن"; else -> "Dark" }) },
                         )
                         FilterChip(
                             selected = !UiPreferences.dark.value,
@@ -456,10 +464,10 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
                                 UiPreferences.dark.value = false
                                 Store.setDarkThemeEnabled(ctx, false)
                             },
-                            label = { Text(if (UiPreferences.language.value == "fa") "روشن" else "Light") },
+                            label = { Text(when (UiPreferences.language.value) { "fa" -> "روشن"; "ar" -> "فاتح"; else -> "Light" }) },
                         )
                     }
-                    Text(if (UiPreferences.language.value == "fa") "زبان برنامه" else "App language", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                    Text(when (UiPreferences.language.value) { "fa" -> "زبان برنامه"; "ar" -> "لغة التطبيق"; else -> "App language" }, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(
                             selected = UiPreferences.language.value == "en",
@@ -477,9 +485,21 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
                             },
                             label = { Text("فارسی") },
                         )
+                        FilterChip(
+                            selected = UiPreferences.language.value == "ar",
+                            onClick = {
+                                UiPreferences.language.value = "ar"
+                                Store.setAppLanguage(ctx, "ar")
+                            },
+                            label = { Text("العربية") },
+                        )
                     }
                     Text(
-                        if (UiPreferences.language.value == "fa") "تغییر پوسته فوراً اعمال می‌شود. زبان فعلاً روی بخش‌های اصلی و تنظیمات اعمال شده است." else "Theme changes apply immediately. Language currently applies to the main navigation, calculator heading and settings.",
+                        when (UiPreferences.language.value) {
+                            "fa" -> "تغییر پوسته فوراً اعمال می‌شود. ترجمه زبان هنوز به بخش‌های اصلی و تنظیمات محدود است."
+                            "ar" -> "يُطبّق تغيير المظهر فوراً. الترجمة متاحة حالياً للأقسام الرئيسية والإعدادات."
+                            else -> "Theme changes apply immediately. Language currently applies to the main navigation, calculator heading and settings."
+                        },
                         color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp,
                     )
                 }
