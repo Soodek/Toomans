@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit
 class App : Application() {
     override fun onCreate() {
         super.onCreate()
+        Store.clearLegacyToken(this)
         Scheduler.ensure(this)
     }
 }
