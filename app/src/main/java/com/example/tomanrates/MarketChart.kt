@@ -34,6 +34,7 @@ private val chartRanges = listOf(
     ChartRange("۲۴ ساعت", 24L * 60 * 60 * 1000),
     ChartRange("۷ روز", 7L * 24 * 60 * 60 * 1000),
     ChartRange("۳۰ روز", 30L * 24 * 60 * 60 * 1000),
+    ChartRange("۱ سال", 365L * 24 * 60 * 60 * 1000),
 )
 
 @Composable
@@ -94,7 +95,7 @@ fun MarketChartInline(snap: Snapshot, calculatorAsset: String) {
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     chartRanges.forEachIndexed { index, item ->
-                        FilterChip(selected = rangeIndex == index, onClick = { rangeIndex = index }, label = { Text(when(index) { 0 -> uiText("۲۴ ساعت", "24 hours", "٢٤ ساعة"); 1 -> uiText("۷ روز", "7 days", "٧ أيام"); else -> uiText("۳۰ روز", "30 days", "٣٠ يوماً") }, fontSize = 12.sp) })
+                        FilterChip(selected = rangeIndex == index, onClick = { rangeIndex = index }, label = { Text(when(index) { 0 -> uiText("۲۴ ساعت", "24 hours", "٢٤ ساعة"); 1 -> uiText("۷ روز", "7 days", "٧ أيام"); 2 -> uiText("۳۰ روز", "30 days", "٣٠ يوماً"); else -> uiText("۱ سال", "1 year", "سنة") }, fontSize = 12.sp) })
                     }
                 }
                 if (displayPoints.size >= 2) {
