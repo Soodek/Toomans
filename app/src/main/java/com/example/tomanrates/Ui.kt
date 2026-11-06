@@ -182,38 +182,38 @@ fun TomanApp(requested: String?) {
             }
         },
         bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 0.dp,
-            ) {
-                listOf(
-                    when (UiPreferences.language.value) { "fa" -> "ماشین‌حساب"; "ar" -> "الحاسبة"; else -> "Calculator" },
-                    when (UiPreferences.language.value) { "fa" -> "ارزها"; "ar" -> "العملات"; else -> "Currencies" },
-                    when (UiPreferences.language.value) { "fa" -> "طلا"; "ar" -> "الذهب"; else -> "Gold" },
-                    when (UiPreferences.language.value) { "fa" -> "هوش مصنوعی"; "ar" -> "الذكاء الاصطناعي"; else -> "AI" },
-                    when (UiPreferences.language.value) { "fa" -> "تنظیمات"; "ar" -> "الإعدادات"; else -> "Settings" },
-                ).forEachIndexed { i, label ->
-                    val isSelected = tab == i
-                    val icon = when (i) {
-                        0 -> Icons.Filled.Calculate
-                        1 -> Icons.Filled.CurrencyExchange
-                        2 -> Icons.Filled.Savings
-                        3 -> Icons.Filled.AutoAwesome
-                        else -> Icons.Filled.Settings
+            if (tab in 0..4) {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = .94f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 7.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    ) {
+                        val labels = listOf(
+                            uiText("ماشین‌حساب", "Calculator", "الحاسبة"),
+                            uiText("ارزها", "Currencies", "العملات"),
+                            uiText("طلا", "Gold", "الذهب"),
+                            uiText("هوش مصنوعی", "AI", "الذكاء الاصطناعي"),
+                            uiText("تنظیمات", "Settings", "الإعدادات"),
+                        )
+                        val icons = listOf(Icons.Filled.Calculate, Icons.Filled.CurrencyExchange, Icons.Filled.Savings, Icons.Filled.AutoAwesome, Icons.Filled.Settings)
+                        labels.forEachIndexed { i, label ->
+                            val selectedItem = tab == i
+                            Column(
+                                Modifier.weight(1f).clickable { tab = i }.padding(vertical = 3.dp),
+                                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(3.dp),
+                            ) {
+                                Icon(icons[i], contentDescription = label, tint = if (selectedItem) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
+                                Text(label, color = if (selectedItem) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp, fontWeight = if (selectedItem) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1)
+                            }
+                        }
                     }
-                    NavigationBarItem(
-                        selected = isSelected,
-                        onClick = { tab = i },
-                        icon = { Icon(imageVector = icon, contentDescription = label) },
-                        label = { Text(label) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = Color(0xFF24364A),
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        ),
-                    )
                 }
             }
         },
