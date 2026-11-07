@@ -472,7 +472,10 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var autoRefresh by remember { mutableStateOf(Store.autoRefreshEnabled(ctx)) }
     var backgroundRefresh by remember { mutableStateOf(Store.backgroundRefreshEnabled(ctx)) }
-    var widgetExpanded by remember { mutableStateOf(false) }\n    var appearanceExpanded by remember { mutableStateOf(true) }\n    var updatesExpanded by remember { mutableStateOf(true) }\n    var sourceExpanded by remember { mutableStateOf(true) }
+    var widgetExpanded by remember { mutableStateOf(false) }
+    var appearanceExpanded by remember { mutableStateOf(true) }
+    var updatesExpanded by remember { mutableStateOf(true) }
+    var sourceExpanded by remember { mutableStateOf(true) }
     var widgetSelected by remember { mutableStateOf(Store.widgetSelected(ctx)) }
     var widgetHero by remember { mutableStateOf(Store.widgetDefaultSlug(ctx)) }
 
@@ -499,9 +502,11 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item { Text(uiText("تنظیمات", "Settings", "الإعدادات"), fontSize = 24.sp, fontWeight = FontWeight.Medium) }
         item {
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+            Card(modifier = Modifier.animateContentSize(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(uiText("ظاهر برنامه", "Appearance", "مظهر التطبيق"), fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                    Row(Modifier.fillMaxWidth().clickable { appearanceExpanded = !appearanceExpanded }, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { Text(uiText("ظاهر برنامه", "Appearance", "مظهر التطبيق"), fontSize = 18.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f)); Text(if (appearanceExpanded) "⌃" else "⌄") }
+                    if (appearanceExpanded) {
+                    Text(uiText("حالت پوسته"
                     Text(uiText("حالت پوسته", "Theme", "المظهر"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(
@@ -556,13 +561,15 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
                         ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp,
                     )
+                    }
                 }
             }
         }
         item {
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+            Card(modifier = Modifier.animateContentSize(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(uiText("به‌روزرسانی قیمت‌ها", "Price updates", "تحديث الأسعار"), fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                    Row(Modifier.fillMaxWidth().clickable { updatesExpanded = !updatesExpanded }, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { Text(uiText("به‌روزرسانی قیمت‌ها", "Price updates", "تحديث الأسعار"), fontSize = 18.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f)); Text(if (updatesExpanded) "⌃" else "⌄") }
+                    if (updatesExpanded) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(uiText("به‌روزرسانی خودکار", "Automatic updates", "التحديثات التلقائية"))
@@ -583,6 +590,7 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
                             Store.setBackgroundRefreshEnabled(ctx, it)
                             Scheduler.sync(ctx)
                         })
+                    }
                     }
                 }
             }
@@ -633,9 +641,11 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
             }
         }
         item {
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+            Card(modifier = Modifier.animateContentSize(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(uiText("منبع داده", "Data source", "مصدر البيانات"), fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                    Row(Modifier.fillMaxWidth().clickable { sourceExpanded = !sourceExpanded }, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { Text(uiText("منبع داده", "Data source", "مصدر البيانات"), fontSize = 18.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f)); Text(if (sourceExpanded) "⌃" else "⌄") }
+                    if (sourceExpanded) {
+                    Text(uiText("صفحات عمومی بازار
                     Text(uiText("صفحات عمومی بازار TGJU · بدون نیاز به کلید API یا توکن الان‌چند.", "TGJU public market pages · No API key or Alanchand token required.", "صفحات السوق العامة من TGJU · لا حاجة إلى مفتاح API أو رمز Alanchand."), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                     StatusLine(snap)
                     Text(
@@ -650,6 +660,7 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
                     Button(enabled = !busy, onClick = { refresh() }) { Text(if (busy) uiText("در حال به‌روزرسانی…", "Updating…", "جارٍ التحديث…") else uiText("به‌روزرسانی قیمت‌ها", "Update prices now", "تحديث الأسعار الآن")) }
                     if (message != null) Text(message!!, fontSize = 13.sp)
                     Text("Prices are read from public website pages. If TGJU changes its page structure or blocks requests, updates may temporarily fail.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                    }
                 }
             }
         }
