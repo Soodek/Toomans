@@ -472,7 +472,7 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var autoRefresh by remember { mutableStateOf(Store.autoRefreshEnabled(ctx)) }
     var backgroundRefresh by remember { mutableStateOf(Store.backgroundRefreshEnabled(ctx)) }
-    var widgetExpanded by remember { mutableStateOf(false) }
+    var widgetExpanded by remember { mutableStateOf(false) }\n    var appearanceExpanded by remember { mutableStateOf(true) }\n    var updatesExpanded by remember { mutableStateOf(true) }\n    var sourceExpanded by remember { mutableStateOf(true) }
     var widgetSelected by remember { mutableStateOf(Store.widgetSelected(ctx)) }
     var widgetHero by remember { mutableStateOf(Store.widgetDefaultSlug(ctx)) }
 
