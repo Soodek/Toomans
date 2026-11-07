@@ -625,6 +625,28 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
                                 }
                             }
                         }
+                        Text(uiText("ترتیب ارزهای ویجت", "Widget currency order", "ترتيب عملات الأداة"), fontWeight = FontWeight.Medium)
+                        widgetSelected.forEachIndexed { index, symbol ->
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                Text(Catalog.code(symbol), modifier = Modifier.weight(1f), fontWeight = if (widgetHero == symbol) FontWeight.Bold else FontWeight.Normal)
+                                SmallBtn("↑", enabled = index > 0) {
+                                    val reordered = widgetSelected.toMutableList().also { list ->
+                                        val tmp = list[index - 1]; list[index - 1] = list[index]; list[index] = tmp
+                                    }
+                                    widgetSelected = reordered
+                                    Store.setWidgetSelected(ctx, reordered)
+                                    changed()
+                                }
+                                SmallBtn("↓", enabled = index < widgetSelected.lastIndex) {
+                                    val reordered = widgetSelected.toMutableList().also { list ->
+                                        val tmp = list[index + 1]; list[index + 1] = list[index]; list[index] = tmp
+                                    }
+                                    widgetSelected = reordered
+                                    Store.setWidgetSelected(ctx, reordered)
+                                    changed()
+                                }
+                            }
+                        }
                         Text(uiText("ارز اصلی ویجت", "Main widget currency", "العملة الرئيسية للأداة"), fontWeight = FontWeight.Medium)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             widgetSelected.forEach { symbol ->
