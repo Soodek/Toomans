@@ -55,7 +55,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -183,14 +186,24 @@ fun TomanApp(requested: String?) {
         },
         bottomBar = {
             if (tab in 0..4) {
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = .94f)),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
+                val navShape = androidx.compose.foundation.shape.RoundedCornerShape(30.dp)
+                Box(
+                    Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp)
+                        .shadow(18.dp, navShape)
+                        .background(
+                            Brush.linearGradient(
+                                colors = if (UiPreferences.dark.value)
+                                    listOf(Color(0xCC172333), Color(0xCC251C38), Color(0xCC321D35))
+                                else listOf(Color(0xDDEAF6FF), Color(0xDDF0E8FF), Color(0xDDFCE8F3))
+                            ), navShape
+                        ).border(
+                            1.dp,
+                            Brush.linearGradient(listOf(Color.White.copy(alpha = .55f), Color(0xFF9CCBFF).copy(alpha = .30f), Color.White.copy(alpha = .12f))),
+                            navShape
+                        )
                 ) {
                     Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 7.dp),
+                        Modifier.fillMaxWidth().padding(horizontal = 7.dp, vertical = 8.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
                     ) {
@@ -204,13 +217,19 @@ fun TomanApp(requested: String?) {
                         val icons = listOf(Icons.Filled.Calculate, Icons.Filled.CurrencyExchange, Icons.Filled.Savings, Icons.Filled.AutoAwesome, Icons.Filled.Settings)
                         labels.forEachIndexed { i, label ->
                             val selectedItem = tab == i
+                            val scale by androidx.compose.animation.core.animateFloatAsState(if (selectedItem) 1.13f else 1f, label = "navIconScale")
                             Column(
-                                Modifier.weight(1f).clickable { tab = i }.padding(vertical = 3.dp),
+                                Modifier.weight(1f).clickable { tab = i }.animateContentSize()
+                                    .background(if (selectedItem) Color(0x337DB7FF) else Color.Transparent, androidx.compose.foundation.shape.RoundedCornerShape(22.dp))
+                                    .padding(vertical = 5.dp, horizontal = 2.dp),
                                 horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(3.dp),
                             ) {
-                                Icon(icons[i], contentDescription = label, tint = if (selectedItem) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
-                                Text(label, color = if (selectedItem) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp, fontWeight = if (selectedItem) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1)
+                                Icon(icons[i], contentDescription = label,
+                                    tint = if (selectedItem) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(22.dp).graphicsLayer { scaleX = scale; scaleY = scale })
+                                Text(label, color = if (selectedItem) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 10.sp, fontWeight = if (selectedItem) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1)
                             }
                         }
                     }
