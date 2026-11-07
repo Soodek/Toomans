@@ -506,7 +506,6 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(Modifier.fillMaxWidth().clickable { appearanceExpanded = !appearanceExpanded }, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { Text(uiText("ظاهر برنامه", "Appearance", "مظهر التطبيق"), fontSize = 18.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f)); Text(if (appearanceExpanded) "⌃" else "⌄") }
                     if (appearanceExpanded) {
-                    Text(uiText("حالت پوسته"
                     Text(uiText("حالت پوسته", "Theme", "المظهر"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(
@@ -667,7 +666,6 @@ fun SettingsTab(snap: Snapshot, changed: () -> Unit) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(Modifier.fillMaxWidth().clickable { sourceExpanded = !sourceExpanded }, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { Text(uiText("منبع داده", "Data source", "مصدر البيانات"), fontSize = 18.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f)); Text(if (sourceExpanded) "⌃" else "⌄") }
                     if (sourceExpanded) {
-                    Text(uiText("صفحات عمومی بازار
                     Text(uiText("صفحات عمومی بازار TGJU · بدون نیاز به کلید API یا توکن الان‌چند.", "TGJU public market pages · No API key or Alanchand token required.", "صفحات السوق العامة من TGJU · لا حاجة إلى مفتاح API أو رمز Alanchand."), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                     StatusLine(snap)
                     Text(
