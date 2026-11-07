@@ -52,8 +52,8 @@ private suspend fun loadOnlineHistory(asset: String): List<ChartPoint> = withCon
             for (i in 0 until data.length()) {
                 val item = data.getJSONObject(i)
                 val price = item.optDouble("close", item.optDouble("price", item.optDouble("value", Double.NaN)))
-                val txt = item.optString("timestamp", item.optString("date", item.optString("time")))
-                val raw = item.optLong("timestamp", 0L)
+                val txt = item.optString("t", item.optString("timestamp", item.optString("date", item.optString("time"))))
+                val raw = item.optLong("timestamp", item.optLong("t", 0L))
                 val ts = if (raw > 0) (if (raw < 10000000000L) raw * 1000 else raw) else runCatching { java.time.Instant.parse(txt).toEpochMilli() }.getOrDefault(0L)
                 if (price.isFinite() && price > 0 && ts > 0) add(ChartPoint(ts, price))
             }
@@ -136,7 +136,7 @@ fun MarketChartInline(snap: Snapshot, calculatorAsset: String) {
                         FilterChip(selected = rangeIndex == index, onClick = { rangeIndex = index }, label = { Text(when(index) { 0 -> uiText("۲۴ ساعت", "24 hours", "٢٤ ساعة"); 1 -> uiText("۷ روز", "7 days", "٧ أيام"); 2 -> uiText("۳۰ روز", "30 days", "٣٠ يوماً"); else -> uiText("۱ سال", "1 year", "سنة") }, fontSize = 12.sp) })
                     }
                 }
-                if (rangeIndex != 0 && displayPoints.size >= 2) {
+                if (displayPoints.size >= 2) {
                     val first = displayPoints.first()
                     val last = displayPoints.last()
                     val minPoint = displayPoints.minByOrNull { it.price }!!
@@ -187,12 +187,15 @@ fun MarketChartInline(snap: Snapshot, calculatorAsset: String) {
                     Text(uiText("از ${Fmt.time(first.timestamp)} تا ${Fmt.time(last.timestamp)} · ${points.size} نمونه", "From ${Fmt.time(first.timestamp)} to ${Fmt.time(last.timestamp)} · ${points.size} samples", "من ${Fmt.time(first.timestamp)} إلى ${Fmt.time(last.timestamp)} · ${points.size} عينة"), color=muted, fontSize=11.sp)
                 } else {
                     Text(
-                        if (displayPoints.isEmpty()) uiText("هنوز تاریخچه‌ای برای این دارایی جمع نشده.", "No history has been collected for this asset yet.", "لم يتم جمع سجل لهذا الأصل بعد.")
+                        if (historyLoading) uiText("در حال دریافت تاریخچه آنلاین…", "Loading online history…", "جارٍ تحميل السجل…")
+                        else if (onlinePoints.isEmpty()) uiText("دریافت تاریخچه آنلاین ناموفق بود؛ اتصال اینترنت یا منبع داده را بررسی کن.", "Online history could not be loaded. Check your connection or data source.", "تعذر تحميل السجل عبر الإنترنت. تحقق من الاتصال أو مصدر البيانات.")
+                        else if (rangeIndex == 0) uiText("منبع تاریخچه روزانه است؛ نمودار ۲۴ ساعت واقعی در دسترس نیست.", "History is daily; true intraday 24-hour chart isn't available.", "السجل يومي؛ مخطط ٢٤ ساعة داخل اليوم غير متاح.")
+                        else if (displayPoints.isEmpty()) uiText("برای این بازه داده تاریخی موجود نیست.", "No historical data for this range.", "لا توجد بيانات تاريخية لهذه الفترة.")
                         else uiText("برای رسم نمودار حداقل دو داده لازم است.", "At least two data points are needed to draw the chart.", "يلزم نقطتا بيانات على الأقل لرسم المخطط."),
                         color = muted, fontSize = 12.sp
                     )
                 }
-                if (current != null) Text(uiText("قیمت فعلی از آخرین داده دریافتی · نمودار از تاریخچه ذخیره‌شده", "Current quote from latest update · chart from stored history", "السعر الحالي من آخر تحديث · المخطط من السجل المحفوظ"), color=muted, fontSize=11.sp)
+                if (current != null) Text(uiText("قیمت فعلی از آخرین به‌روزرسانی · نمودار از تاریخچه آنلاین", "Current quote from latest update · chart from online history", "السعر الحالي من آخر تحديث · المخطط من السجل عبر الإنترنت"), color=muted, fontSize=11.sp)
             }
         }
     }
