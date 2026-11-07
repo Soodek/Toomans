@@ -28,6 +28,38 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.URL
+
+
+private data class ChartPoint(val timestamp: Long, val price: Double)
+private fun historySymbol(asset: String): String = when (asset) {
+    "gold18" -> "GOLD_18K_IRR"
+    "coin" -> "COIN_EMAMI_IRR"
+    else -> Catalog.code(asset).uppercase(Locale.US) + "_IRR_FREE"
+}
+private suspend fun loadOnlineHistory(asset: String): List<ChartPoint> = withContext(Dispatchers.IO) {
+    runCatching {
+        val symbol = historySymbol(asset)
+        val conn = URL("https://raw.githubusercontent.com/iran-market/iran-market.github.io/main/data/history/" + symbol + ".json").openConnection().apply {
+            connectTimeout = 12000; readTimeout = 15000
+        }
+        val json = JSONObject(conn.getInputStream().bufferedReader().use { it.readText() })
+        val data = json.getJSONArray("data")
+        buildList {
+            for (i in 0 until data.length()) {
+                val item = data.getJSONObject(i)
+                val price = item.optDouble("close", item.optDouble("price", item.optDouble("value", Double.NaN)))
+                val txt = item.optString("timestamp", item.optString("date", item.optString("time")))
+                val raw = item.optLong("timestamp", 0L)
+                val ts = if (raw > 0) (if (raw < 10000000000L) raw * 1000 else raw) else runCatching { java.time.Instant.parse(txt).toEpochMilli() }.getOrDefault(0L)
+                if (price.isFinite() && price > 0 && ts > 0) add(ChartPoint(ts, price))
+            }
+        }.sortedBy { it.timestamp }
+    }.getOrElse { emptyList() }
+}
 
 private data class ChartRange(val label: String, val durationMs: Long)
 private val chartRanges = listOf(
@@ -55,9 +87,15 @@ fun MarketChartInline(snap: Snapshot, calculatorAsset: String) {
         "coin" -> uiText("سکه امامی", "Emami Coin", "عملة إمامي")
         else -> "${Catalog.flag(asset)}  ${Catalog.code(asset)} · ${Catalog.englishName(asset, rate?.name)}"
     }
-    val points = remember(asset, rangeIndex, snap.lastSuccessAt) {
-        Store.priceHistory(ctx, asset, chartRanges[rangeIndex].durationMs)
+    var onlinePoints by remember(asset) { mutableStateOf<List<ChartPoint>>(emptyList()) }
+    var historyLoading by remember(asset) { mutableStateOf(true) }
+    LaunchedEffect(asset) {
+        historyLoading = true
+        onlinePoints = loadOnlineHistory(asset)
+        historyLoading = false
     }
+    val cutoff = System.currentTimeMillis() - chartRanges[rangeIndex].durationMs
+    val points = remember(onlinePoints, rangeIndex) { onlinePoints.filter { it.timestamp >= cutoff } }
     val displayPoints = remember(points) {
         if (points.size <= 180) points else points.filterIndexed { index, _ ->
             index == 0 || index == points.lastIndex || index % (points.size / 180) == 0
@@ -98,7 +136,7 @@ fun MarketChartInline(snap: Snapshot, calculatorAsset: String) {
                         FilterChip(selected = rangeIndex == index, onClick = { rangeIndex = index }, label = { Text(when(index) { 0 -> uiText("۲۴ ساعت", "24 hours", "٢٤ ساعة"); 1 -> uiText("۷ روز", "7 days", "٧ أيام"); 2 -> uiText("۳۰ روز", "30 days", "٣٠ يوماً"); else -> uiText("۱ سال", "1 year", "سنة") }, fontSize = 12.sp) })
                     }
                 }
-                if (displayPoints.size >= 2) {
+                if (rangeIndex != 0 && displayPoints.size >= 2) {
                     val first = displayPoints.first()
                     val last = displayPoints.last()
                     val minPoint = displayPoints.minByOrNull { it.price }!!
