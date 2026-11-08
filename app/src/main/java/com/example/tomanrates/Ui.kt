@@ -232,9 +232,9 @@ fun TomanApp(requested: String?) {
                                 verticalArrangement = Arrangement.spacedBy(3.dp),
                             ) {
                                 Icon(icons[i], contentDescription = label,
-                                    tint = if (selectedItem) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = if (selectedItem) Color(0xFF071426) else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(22.dp).graphicsLayer { scaleX = scale; scaleY = scale; rotationZ = if (selectedItem) -3f else 0f })
-                                Text(label, color = if (selectedItem) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                Text(label, color = if (selectedItem) Color(0xFF071426) else MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontSize = 10.sp, fontWeight = if (selectedItem) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1)
                             }
                         }
