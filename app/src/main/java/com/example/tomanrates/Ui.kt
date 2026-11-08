@@ -1,6 +1,8 @@
 package com.example.tomanrates
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -58,6 +60,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
@@ -219,17 +222,18 @@ fun TomanApp(requested: String?) {
                         val icons = listOf(Icons.Filled.Calculate, Icons.Filled.CurrencyExchange, Icons.Filled.Savings, Icons.Filled.AutoAwesome, Icons.Filled.Settings)
                         labels.forEachIndexed { i, label ->
                             val selectedItem = tab == i
-                            val scale by androidx.compose.animation.core.animateFloatAsState(if (selectedItem) 1.13f else 1f, label = "navIconScale")
+                            val scale by animateFloatAsState(if (selectedItem) 1.10f else 1f, animationSpec = spring(dampingRatio = 0.62f, stiffness = 380f), label = "navIconScale")
+                            val selectedAlpha by animateFloatAsState(if (selectedItem) 1f else 0f, animationSpec = spring(dampingRatio = 0.78f, stiffness = 240f), label = "navSelectedAlpha"))
                             Column(
                                 Modifier.weight(1f).clickable { tab = i }.animateContentSize()
-                                    .background(if (selectedItem) Color(0x337DB7FF) else Color.Transparent, androidx.compose.foundation.shape.RoundedCornerShape(22.dp))
+                                    .background(Color(0x337DB7FF).copy(alpha = selectedAlpha), androidx.compose.foundation.shape.RoundedCornerShape(22.dp))
                                     .padding(vertical = 5.dp, horizontal = 2.dp),
                                 horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(3.dp),
                             ) {
                                 Icon(icons[i], contentDescription = label,
                                     tint = if (selectedItem) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(22.dp).graphicsLayer { scaleX = scale; scaleY = scale })
+                                    modifier = Modifier.size(22.dp).graphicsLayer { scaleX = scale; scaleY = scale; rotationZ = if (selectedItem) -3f else 0f })
                                 Text(label, color = if (selectedItem) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontSize = 10.sp, fontWeight = if (selectedItem) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1)
                             }
@@ -370,6 +374,33 @@ fun CalculatorTab(snap: Snapshot, selected: List<String>, slug: String, onSlug: 
                 }
                 StatusLine(snap)
             }
+        }
+        val goldQuote = remember(tick) { GoldRepository.snapshot(ctx)?.gold18?.price }
+        if (goldQuote != null) {
+            val sot = goldQuote.divide(BigDecimal("1000"))
+            val ounce = goldQuote.multiply(BigDecimal("31.1034768"))
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(uiText("قیمت واحدهای طلا", "Gold unit prices", "أسعار وحدات الذهب"), fontWeight = FontWeight.SemiBold)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Column { Text(uiText("گرم ۱۸ عیار", "18K gram", "غرام 18 قيراط"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant); Text("${Fmt.toman(goldQuote)} تومان", fontWeight = FontWeight.Medium) }
+                        Column { Text(uiText("سوت (۱/۱۰۰۰ گرم)", "Sot (0.001 g)", "سوت (0.001 غرام)"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant); Text("${Fmt.toman(sot)} تومان", fontWeight = FontWeight.Medium) }
+                    }
+                    Column { Text(uiText("اونس تروا (۳۱٫۱۰۳۵ گرم)", "Troy ounce (31.1035 g)", "أونصة تروي (31.1035 غرام)"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant); Text("${Fmt.toman(ounce)} تومان", fontWeight = FontWeight.Medium) }
+                }
+            }
+        }
+        val tether = snap.rates["usdt"] ?: snap.rates["tether"] ?: snap.rates["crypto-tether-toman"]
+        if (tether != null) {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text("Tether (USDT)", fontWeight = FontWeight.SemiBold)
+                    Text("${Fmt.toman(tether.sell)} ${uiText("تومان", "Toman", "تومان")}", fontSize = 24.sp, fontWeight = FontWeight.Medium)
+                    Text(uiText("قیمت فروش تتر · منبع بازار", "USDT selling rate · market source", "سعر بيع USDT · مصدر السوق"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        } else {
+            Text(uiText("قیمت تتر در پاسخ فعلی منبع ارز موجود نیست.", "USDT isn't present in the current currency feed.", "USDT غير موجود في تغذية العملات الحالية."), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         MarketChartInline(snap, cur)
     }
