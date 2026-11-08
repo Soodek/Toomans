@@ -223,7 +223,7 @@ fun TomanApp(requested: String?) {
                         labels.forEachIndexed { i, label ->
                             val selectedItem = tab == i
                             val scale by animateFloatAsState(if (selectedItem) 1.10f else 1f, animationSpec = spring(dampingRatio = 0.62f, stiffness = 380f), label = "navIconScale")
-                            val selectedAlpha by animateFloatAsState(if (selectedItem) 1f else 0f, animationSpec = spring(dampingRatio = 0.78f, stiffness = 240f), label = "navSelectedAlpha"))
+                            val selectedAlpha by animateFloatAsState(if (selectedItem) 1f else 0f, animationSpec = spring(dampingRatio = 0.78f, stiffness = 240f), label = "navSelectedAlpha")
                             Column(
                                 Modifier.weight(1f).clickable { tab = i }.animateContentSize()
                                     .background(Color(0x337DB7FF).copy(alpha = selectedAlpha), androidx.compose.foundation.shape.RoundedCornerShape(22.dp))
@@ -375,7 +375,7 @@ fun CalculatorTab(snap: Snapshot, selected: List<String>, slug: String, onSlug: 
                 StatusLine(snap)
             }
         }
-        val goldQuote = remember(tick) { GoldRepository.snapshot(ctx)?.gold18?.price }
+        val goldQuote = remember(snap.lastSuccessAt) { GoldRepository.snapshot(ctx)?.gold18?.price }
         if (goldQuote != null) {
             val sot = goldQuote.divide(BigDecimal("1000"))
             val ounce = goldQuote.multiply(BigDecimal("31.1034768"))
