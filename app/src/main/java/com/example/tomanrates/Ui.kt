@@ -85,6 +85,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.math.BigDecimal
+import org.json.JSONObject
+import java.net.URL
 
 private val GreenC = Color(0xFF4ADE80)
 private val AmberC = Color(0xFFFBBF24)
@@ -375,32 +377,38 @@ fun CalculatorTab(snap: Snapshot, selected: List<String>, slug: String, onSlug: 
                 StatusLine(snap)
             }
         }
-        val goldQuote = remember(snap.lastSuccessAt) { GoldRepository.snapshot(ctx)?.gold18?.price }
+        var goldQuote by remember { mutableStateOf(GoldRepository.snapshot(ctx)?.gold18?.price) }
+        var tetherQuote by remember { mutableStateOf<BigDecimal?>(null) }
+        LaunchedEffect(Unit) {
+            withContext(Dispatchers.IO) {
+                runCatching { GoldRepository.refresh(ctx).gold18.price }.onSuccess { goldQuote = it }
+                runCatching {
+                    val conn = URL("https://apiv2.nobitex.ir/v3/orderbook/USDTIRT").openConnection().apply { connectTimeout = 10000; readTimeout = 12000 }
+                    val json = JSONObject(conn.getInputStream().bufferedReader().use { it.readText() })
+                    json.optString("lastTradePrice").toBigDecimalOrNull()?.divide(BigDecimal("10"))
+                }.onSuccess { tetherQuote = it }
+            }
+        }
         if (goldQuote != null) {
-            val sot = goldQuote.divide(BigDecimal("1000"))
-            val ounce = goldQuote.multiply(BigDecimal("31.1034768"))
+            val sot = goldQuote!!.divide(BigDecimal("1000"))
+            val ounce = goldQuote!!.multiply(BigDecimal("31.1034768"))
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(uiText("قیمت واحدهای طلا", "Gold unit prices", "أسعار وحدات الذهب"), fontWeight = FontWeight.SemiBold)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Column { Text(uiText("گرم ۱۸ عیار", "18K gram", "غرام 18 قيراط"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant); Text("${Fmt.toman(goldQuote)} تومان", fontWeight = FontWeight.Medium) }
-                        Column { Text(uiText("سوت (۱/۱۰۰۰ گرم)", "Sot (0.001 g)", "سوت (0.001 غرام)"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant); Text("${Fmt.toman(sot)} تومان", fontWeight = FontWeight.Medium) }
+                        Column { Text(uiText("گرم ۱۸ عیار", "18K gram", "غرام 18 قيراط"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(Fmt.toman(goldQuote!!) + " تومان", fontWeight = FontWeight.Medium) }
+                        Column { Text(uiText("سوت (۱/۱۰۰۰ گرم)", "Sot (0.001 g)", "سوت (0.001 غرام)"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(Fmt.toman(sot) + " تومان", fontWeight = FontWeight.Medium) }
                     }
-                    Column { Text(uiText("اونس تروا (۳۱٫۱۰۳۵ گرم)", "Troy ounce (31.1035 g)", "أونصة تروي (31.1035 غرام)"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant); Text("${Fmt.toman(ounce)} تومان", fontWeight = FontWeight.Medium) }
+                    Column { Text(uiText("اونس تروا (۳۱٫۱۰۳۵ گرم)", "Troy ounce (31.1035 g)", "أونصة تروي (31.1035 غرام)"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(Fmt.toman(ounce) + " تومان", fontWeight = FontWeight.Medium) }
                 }
             }
         }
-        val tether = snap.rates["usdt"] ?: snap.rates["tether"] ?: snap.rates["crypto-tether-toman"]
-        if (tether != null) {
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text("Tether (USDT)", fontWeight = FontWeight.SemiBold)
-                    Text("${Fmt.toman(tether.sell)} ${uiText("تومان", "Toman", "تومان")}", fontSize = 24.sp, fontWeight = FontWeight.Medium)
-                    Text(uiText("قیمت فروش تتر · منبع بازار", "USDT selling rate · market source", "سعر بيع USDT · مصدر السوق"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text("Tether (USDT)", fontWeight = FontWeight.SemiBold)
+                Text(tetherQuote?.let { Fmt.toman(it) + " تومان" } ?: uiText("در حال دریافت قیمت…", "Fetching live price…", "جارٍ جلب السعر…"), fontSize = 24.sp, fontWeight = FontWeight.Medium)
+                Text(uiText("قیمت لحظه‌ای تتر · نوبیتکس", "Live USDT price · Nobitex", "سعر USDT اللحظي · نوبیتكس"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-        } else {
-            Text(uiText("قیمت تتر در پاسخ فعلی منبع ارز موجود نیست.", "USDT isn't present in the current currency feed.", "USDT غير موجود في تغذية العملات الحالية."), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         MarketChartInline(snap, cur)
     }
