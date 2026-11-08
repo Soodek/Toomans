@@ -85,7 +85,10 @@ object GoldRepository {
         val gold = rows.values.firstOrNull {
             it.key.contains("geram18", true) ||
                 it.key.contains("gold_18", true) ||
-                (it.name.contains("۱۸") && it.name.contains("گرم"))
+                it.key.contains("gold18", true) ||
+                it.key.contains("18k", true) ||
+                (it.name.contains("گرم") && (it.name.contains("۱۸") || it.name.contains("18"))) ||
+                (it.name.contains("طلای") && (it.name.contains("۱۸") || it.name.contains("18")))
         } ?: throw IllegalStateException("TGJU 18K gold quote was not found on its public market page")
         val coin = rows.values.firstOrNull {
             it.key.contains("sekkeh", true) ||
@@ -208,6 +211,30 @@ fun GoldTab() {
             item { Text("No gold prices cached yet.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         } else {
             item { GoldPriceCard(market!!.gold18, "18K gold · 750") }
+            item {
+                val gram18 = market!!.gold18.price
+                val sotPrice = gram18.divide(BigDecimal("1000"))
+                val ouncePrice = gram18.multiply(BigDecimal("31.1034768"))
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("Gold price units · calculated from 18K", fontWeight = FontWeight.SemiBold)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Column(Modifier.weight(1f)) {
+                                Text("1 gram · 18K", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                                Text("\${Fmt.toman(gram18)} Toman", fontWeight = FontWeight.Medium)
+                            }
+                            Column(Modifier.weight(1f)) {
+                                Text("1 sot · 0.001 g", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                                Text("\${Fmt.toman(sotPrice)} Toman", fontWeight = FontWeight.Medium)
+                            }
+                        }
+                        Column {
+                            Text("1 troy ounce · 31.1034768 g", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                            Text("\${Fmt.toman(ouncePrice)} Toman", fontWeight = FontWeight.Medium)
+                        }
+                    }
+                }
+            }
             item {
                 val pure24 = market!!.gold18.price.multiply(BigDecimal("1.3333333333"))
                 GoldPriceCard(
